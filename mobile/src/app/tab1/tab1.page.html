@@ -1,0 +1,37 @@
+<ion-header [translucent]="true">
+  <ion-toolbar color="primary">
+    <ion-title>Boi na Tela</ion-title>
+  </ion-toolbar>
+</ion-header>
+
+<ion-content [fullscreen]="true">
+  <ion-header collapse="condense">
+    <ion-toolbar>
+      <ion-title size="large">Vitrine</ion-title>
+    </ion-toolbar>
+  </ion-header>
+
+  <ion-refresher slot="fixed" (ionRefresh)="atualizarPuxando($event)">
+    <ion-refresher-content></ion-refresher-content>
+  </ion-refresher>
+
+  <div class="chips" *ngIf="categorias.length">
+    <ion-chip *ngFor="let item of categorias" color="success" outline="true">
+      {{ rotulos[item.categoria] }} · {{ item.count }}
+    </ion-chip>
+  </div>
+
+  <ion-spinner *ngIf="carregando" class="ion-margin"></ion-spinner>
+
+  <ion-grid class="grade" fixed *ngIf="!carregando">
+    <ion-row>
+      <ion-col *ngFor="let anuncio of anuncios; trackBy: porId" size="12" size-md="6">
+        <app-anuncio-card [anuncio]="anuncio" (abrir)="verDetalhes($event)"></app-anuncio-card>
+      </ion-col>
+    </ion-row>
+  </ion-grid>
+
+  <p class="vazio" *ngIf="!carregando && anuncios.length === 0">
+    Nenhum anúncio no momento. Puxe para atualizar.
+  </p>
+</ion-content>

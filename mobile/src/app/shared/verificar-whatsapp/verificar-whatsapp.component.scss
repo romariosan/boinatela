@@ -1,0 +1,53 @@
+.conteudo {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  max-width: 420px;
+  margin: 0 auto;
+  text-align: center;
+}
+
+.icone {
+  font-size: 56px;
+  color: var(--color-whatsapp);
+}
+
+h2 {
+  margin: 12px 0 8px;
+  font-size: 1.25rem;
+  font-weight: 700;
+}
+
+.mensagem {
+  margin: 0 0 8px;
+  line-height: 1.45;
+}
+
+.passos {
+  margin: 0 0 20px;
+  font-size: 0.9rem;
+  color: var(--ion-color-medium);
+}
+
+ion-button {
+  width: 100%;
+}
+
+.codigo {
+  margin: 12px 0 0;
+  font-size: 0.85rem;
+  color: var(--ion-color-medium);
+
+  strong {
+    letter-spacing: 0.06em;
+    color: var(--ion-text-color);
+  }
+}
+
+.aguardando {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 16px 0 0;
+  color: var(--ion-color-success);
+}

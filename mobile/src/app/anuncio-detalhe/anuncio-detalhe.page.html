@@ -1,0 +1,62 @@
+<ion-header>
+  <ion-toolbar color="primary">
+    <ion-buttons slot="start">
+      <ion-back-button defaultHref="/tabs/tab1"></ion-back-button>
+    </ion-buttons>
+    <ion-title>Anúncio</ion-title>
+  </ion-toolbar>
+</ion-header>
+
+<ion-content>
+  <ion-spinner *ngIf="carregando" class="ion-margin"></ion-spinner>
+
+  <ng-container *ngIf="anuncio && !carregando">
+    <div class="midia">
+      <swiper-container *ngIf="anuncio.fotos.length > 1; else fotoUnica" #carrossel init="false" class="galeria">
+        <swiper-slide *ngFor="let foto of anuncio.fotos; let i = index">
+          <img
+            class="foto"
+            [src]="foto"
+            [alt]="anuncio.titulo + ' — foto ' + (i + 1) + ' de ' + anuncio.fotos.length"
+            (error)="usarPlaceholder($event)"
+          />
+        </swiper-slide>
+      </swiper-container>
+
+      <ng-template #fotoUnica>
+        <img
+          class="foto"
+          [src]="anuncio.fotos[0] || fotoPlaceholder"
+          [alt]="anuncio.titulo"
+          (error)="usarPlaceholder($event)"
+        />
+      </ng-template>
+
+      <span class="selo-vendido" *ngIf="anuncio.status === 'VENDIDO'">VENDIDO</span>
+    </div>
+
+    <div class="ion-padding">
+      <h1 class="titulo">{{ anuncio.titulo }}</h1>
+      <p class="preco">{{ precoLabel(anuncio) }}</p>
+      <p class="meta">{{ anuncio.cidade }} · {{ rotulos[anuncio.categoriaAnimal] }}</p>
+
+      <div class="tags">
+        <ion-chip outline="true">{{ rotulos[anuncio.raca] }}</ion-chip>
+        <ion-chip outline="true">{{ rotulos[anuncio.aptidao] }}</ion-chip>
+      </div>
+
+      <p class="descricao">{{ anuncio.descricao }}</p>
+      <p class="meta">Vendedor: {{ anuncio.vendedorNome }}</p>
+
+      <ion-button *ngIf="anuncio.status === 'VENDIDO'; else contato" expand="block" class="ion-margin-top" color="medium" disabled>
+        Este animal já foi vendido
+      </ion-button>
+      <ng-template #contato>
+        <ion-button expand="block" class="ion-margin-top botao-whatsapp" (click)="falarComVendedor()">
+          <ion-icon slot="start" name="logo-whatsapp"></ion-icon>
+          Falar com o vendedor
+        </ion-button>
+      </ng-template>
+    </div>
+  </ng-container>
+</ion-content>

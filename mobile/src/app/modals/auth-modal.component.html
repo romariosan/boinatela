@@ -1,0 +1,136 @@
+<ion-header>
+  <ion-toolbar color="primary">
+    <ion-buttons slot="start" *ngIf="modo === 'recuperar'">
+      <ion-button (click)="irPara('login')" aria-label="Voltar para o login">
+        <ion-icon slot="icon-only" name="arrow-back-outline"></ion-icon>
+      </ion-button>
+    </ion-buttons>
+    <ion-title>{{ titulo }}</ion-title>
+    <ion-buttons slot="end">
+      <ion-button (click)="fechar()">Fechar</ion-button>
+    </ion-buttons>
+  </ion-toolbar>
+</ion-header>
+
+<ion-content class="ion-padding">
+  <ng-container *ngIf="modo !== 'recuperar'; else recuperacao">
+    <p>Login rápido com WhatsApp. Sem e-mail.</p>
+
+    <ion-list>
+      <ion-item *ngIf="modo === 'cadastro'">
+        <ion-input label="Nome" labelPlacement="stacked" [(ngModel)]="nome"></ion-input>
+      </ion-item>
+      <ion-item>
+        <ion-input
+          label="WhatsApp"
+          labelPlacement="stacked"
+          type="tel"
+          inputmode="numeric"
+          [(ngModel)]="whatsapp"
+          placeholder="61999999999"
+        ></ion-input>
+      </ion-item>
+      <ion-item>
+        <ion-input label="Senha" labelPlacement="stacked" type="password" [(ngModel)]="senha"></ion-input>
+      </ion-item>
+    </ion-list>
+
+    <ion-button
+      *ngIf="modo === 'login'"
+      fill="clear"
+      size="small"
+      class="esqueceu"
+      (click)="irPara('recuperar')"
+    >
+      Esqueceu a senha?
+    </ion-button>
+
+    <ion-button expand="block" class="ion-margin-top botao-whatsapp" [disabled]="carregando" (click)="enviar()">
+      <ion-icon slot="start" name="logo-whatsapp"></ion-icon>
+      {{ modo === 'cadastro' ? 'Cadastrar' : 'Entrar' }}
+    </ion-button>
+
+    <ion-button expand="block" fill="clear" (click)="irPara(modo === 'cadastro' ? 'login' : 'cadastro')">
+      {{ modo === 'cadastro' ? 'Já tenho conta' : 'Quero me cadastrar' }}
+    </ion-button>
+  </ng-container>
+
+  <ng-template #recuperacao>
+    <ng-container *ngIf="etapa === 'solicitar'; else redefinir">
+      <p>Informe o WhatsApp da sua conta. Vamos mandar um código de 4 dígitos para ele.</p>
+      <ion-list>
+        <ion-item>
+          <ion-input
+            label="WhatsApp"
+            labelPlacement="stacked"
+            type="tel"
+            inputmode="numeric"
+            [(ngModel)]="whatsapp"
+            placeholder="61999999999"
+          ></ion-input>
+        </ion-item>
+      </ion-list>
+      <ion-button expand="block" class="ion-margin-top botao-whatsapp" [disabled]="carregando" (click)="enviarCodigo()">
+        <ion-icon slot="start" name="logo-whatsapp"></ion-icon>
+        Enviar Código
+      </ion-button>
+    </ng-container>
+
+    <ng-template #redefinir>
+      <p>Digite o código que chegou no WhatsApp <strong>{{ whatsapp }}</strong> e escolha a nova senha.</p>
+      <ion-list>
+        <ion-item>
+          <ion-input
+            class="campo-codigo"
+            label="Código"
+            labelPlacement="stacked"
+            type="text"
+            inputmode="numeric"
+            autocomplete="one-time-code"
+            maxlength="4"
+            placeholder="0000"
+            [(ngModel)]="codigo"
+            errorText="Digite os 4 números do código."
+            [class.ion-invalid]="tentouRedefinir && !codigoValido"
+            [class.ion-touched]="tentouRedefinir && !codigoValido"
+          ></ion-input>
+        </ion-item>
+        <ion-item>
+          <ion-input
+            label="Nova Senha"
+            labelPlacement="stacked"
+            type="password"
+            autocomplete="new-password"
+            [(ngModel)]="novaSenha"
+            errorText="Use pelo menos 4 caracteres."
+            [class.ion-invalid]="tentouRedefinir && senhaCurta"
+            [class.ion-touched]="tentouRedefinir && senhaCurta"
+          ></ion-input>
+        </ion-item>
+        <ion-item>
+          <ion-input
+            label="Confirmar Nova Senha"
+            labelPlacement="stacked"
+            type="password"
+            autocomplete="new-password"
+            [(ngModel)]="confirmarSenha"
+            errorText="As senhas não conferem."
+            [class.ion-invalid]="tentouRedefinir && senhasDiferentes"
+            [class.ion-touched]="tentouRedefinir && senhasDiferentes"
+          ></ion-input>
+        </ion-item>
+      </ion-list>
+
+      <ion-button expand="block" class="ion-margin-top botao-whatsapp" [disabled]="carregando" (click)="redefinirEEntrar()">
+        Redefinir e Entrar
+      </ion-button>
+
+      <ion-button expand="block" fill="clear" [disabled]="carregando || reenviarEm > 0" (click)="enviarCodigo()">
+        {{ reenviarEm > 0 ? 'Reenviar código em ' + reenviarEm + 's' : 'Reenviar código' }}
+      </ion-button>
+      <ion-button expand="block" fill="clear" size="small" (click)="trocarNumero()">
+        Trocar número
+      </ion-button>
+    </ng-template>
+  </ng-template>
+</ion-content>

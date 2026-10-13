@@ -1,0 +1,91 @@
+<ion-header [translucent]="true">
+  <ion-toolbar color="primary">
+    <ion-title>Buscar</ion-title>
+  </ion-toolbar>
+  <ion-toolbar class="barra-busca">
+    <div class="linha-busca">
+      <ion-searchbar
+        placeholder="Ex: Bezerros Nelore, Formosa..."
+        [debounce]="350"
+        inputmode="search"
+        enterkeyhint="search"
+        [value]="termo"
+        (ionInput)="aoDigitar($event)"
+      ></ion-searchbar>
+      <ion-button fill="clear" class="limpar" [disabled]="!temFiltros" (click)="limparFiltros()">
+        <ion-icon slot="start" name="refresh-outline"></ion-icon>
+        Limpar
+      </ion-button>
+    </div>
+
+    <ion-grid class="filtros">
+      <ion-row>
+        <ion-col size="4">
+          <ion-select
+            aria-label="Animal"
+            fill="outline"
+            interface="action-sheet"
+            [interfaceOptions]="{ header: 'Animal' }"
+            cancelText="Cancelar"
+            okText="Confirmar"
+            placeholder="Qualquer animal"
+            [value]="categoria"
+            (ionChange)="aoMudarCategoria($event)"
+          >
+            <ion-select-option value="">Qualquer animal</ion-select-option>
+            <ion-select-option *ngFor="let item of categorias" [value]="item.categoria">
+              {{ rotulos[item.categoria] }} ({{ item.count }})
+            </ion-select-option>
+          </ion-select>
+        </ion-col>
+        <ion-col size="3">
+          <ion-select
+            aria-label="Estado"
+            fill="outline"
+            interface="action-sheet"
+            [interfaceOptions]="{ header: 'Estado (UF)' }"
+            cancelText="Cancelar"
+            okText="Confirmar"
+            placeholder="UF"
+            [selectedText]="uf || 'Todas'"
+            [value]="uf"
+            (ionChange)="aoMudarUf($event)"
+          >
+            <ion-select-option *ngFor="let item of ufsDaRegiao" [value]="item.sigla">
+              {{ item.nome }} ({{ item.sigla }})
+            </ion-select-option>
+            <ion-select-option value="">Todas as UFs</ion-select-option>
+            <ion-select-option *ngFor="let item of outrasUfs" [value]="item.sigla">
+              {{ item.nome }} ({{ item.sigla }})
+            </ion-select-option>
+          </ion-select>
+        </ion-col>
+        <ion-col size="5">
+          <button type="button" class="campo-cidade" (click)="escolherCidade()" aria-label="Cidade">
+            <span>{{ cidade ? nomeCidade(cidade) : 'Qualquer cidade' }}</span>
+            <ion-icon name="chevron-down-outline"></ion-icon>
+          </button>
+        </ion-col>
+      </ion-row>
+    </ion-grid>
+  </ion-toolbar>
+  <ion-progress-bar *ngIf="carregando" type="indeterminate" color="success"></ion-progress-bar>
+</ion-header>
+
+<ion-content [fullscreen]="true">
+  <p class="total" *ngIf="buscou && anuncios.length">
+    {{ anuncios.length }} {{ anuncios.length === 1 ? 'anúncio encontrado' : 'anúncios encontrados' }}
+  </p>
+
+  <div class="grade">
+    <app-anuncio-card
+      *ngFor="let anuncio of anuncios; trackBy: porId"
+      [anuncio]="anuncio"
+      (abrir)="verDetalhes($event)"
+    ></app-anuncio-card>
+  </div>
+
+  <p class="vazio" *ngIf="buscou && !carregando && anuncios.length === 0">
+    Nenhum anúncio encontrado. Tente outra palavra ou troque os filtros.
+  </p>
+</ion-content>

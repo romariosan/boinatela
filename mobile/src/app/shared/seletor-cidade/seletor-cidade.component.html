@@ -1,0 +1,38 @@
+<ion-header>
+  <ion-toolbar color="primary">
+    <ion-title>{{ titulo }}</ion-title>
+    <ion-buttons slot="end">
+      <ion-button (click)="cancelar()">Cancelar</ion-button>
+    </ion-buttons>
+  </ion-toolbar>
+  <ion-toolbar>
+    <ion-searchbar
+      placeholder="Buscar cidade"
+      [debounce]="150"
+      enterkeyhint="search"
+      (ionInput)="aoBuscar($event)"
+    ></ion-searchbar>
+  </ion-toolbar>
+</ion-header>
+
+<ion-content>
+  <div class="aviso" *ngIf="carregando">
+    <ion-spinner></ion-spinner>
+  </div>
+
+  <ion-list *ngIf="!carregando">
+    <ion-item *ngIf="opcaoTodas && !termo" button [detail]="false" (click)="escolher('')">
+      <ion-label>{{ opcaoTodas }}</ion-label>
+      <ion-icon *ngIf="!selecionada" slot="end" name="checkmark" color="success"></ion-icon>
+    </ion-item>
+    <ion-item *ngFor="let cidade of filtradas.slice(0, limite)" button [detail]="false" (click)="escolher(cidade)">
+      <ion-label>{{ exibir(cidade) }}</ion-label>
+      <ion-icon *ngIf="cidade === selecionada" slot="end" name="checkmark" color="success"></ion-icon>
+    </ion-item>
+  </ion-list>
+
+  <p class="aviso" *ngIf="!carregando && filtradas.length > limite">
+    Mostrando {{ limite }} de {{ filtradas.length }} cidades. Digite para refinar.
+  </p>
+  <p class="aviso" *ngIf="!carregando && !filtradas.length">Nenhuma cidade encontrada.</p>
+</ion-content>

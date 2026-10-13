@@ -1,0 +1,32 @@
+# Java / Maven
+backend/target/
+backend/uploads/
+backend/.mvn/wrapper/maven-wrapper.jar
+*.class
+*.jar
+*.war
+hs_err_pid*
+
+# Node / Ionic
+mobile/node_modules/
+mobile/www/
+mobile/.angular/
+mobile/.ionic/
+mobile/platforms/
+mobile/plugins/
+mobile/android/
+mobile/ios/
+npm-debug.log*
+.DS_Store
+
+# IDE
+.idea/
+*.iml
+.vscode/
+*.swp
+
+# Env / secrets
+.env
+.env.local
+backend/src/main/resources/application-local.yml
+.webhook-token-dev.txt

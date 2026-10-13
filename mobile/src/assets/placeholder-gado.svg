@@ -1,0 +1,23 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 300" role="img" aria-label="Foto de gado indispon&#237;vel">
+  <defs>
+    <linearGradient id="ceu" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#cfe6c9"/>
+      <stop offset="1" stop-color="#e9f3e4"/>
+    </linearGradient>
+  </defs>
+  <rect width="400" height="300" fill="url(#ceu)"/>
+  <rect y="210" width="400" height="90" fill="#7fae6b"/>
+  <path d="M0 214 Q100 196 200 212 T400 206 V222 H0Z" fill="#6e9d5c"/>
+  <g fill="#3b4a35">
+    <ellipse cx="190" cy="168" rx="82" ry="42"/>
+    <rect x="128" y="190" width="14" height="44" rx="5"/>
+    <rect x="152" y="194" width="14" height="40" rx="5"/>
+    <rect x="214" y="194" width="14" height="40" rx="5"/>
+    <rect x="238" y="190" width="14" height="44" rx="5"/>
+    <path d="M262 150 L296 132 Q318 126 324 146 L326 170 Q322 186 304 184 L270 178Z"/>
+    <path d="M298 134 L290 116 L302 128Z"/>
+    <path d="M316 132 L326 114 L322 134Z"/>
+    <path d="M110 160 Q92 170 96 196" stroke="#3b4a35" stroke-width="5" fill="none" stroke-linecap="round"/>
+  </g>
+  <circle cx="312" cy="150" r="3" fill="#e9f3e4"/>
+</svg>

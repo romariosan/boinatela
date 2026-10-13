@@ -1,0 +1,20 @@
+.chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  padding: 12px 16px 0;
+}
+
+.grade {
+  padding: 4px 8px 24px;
+
+  ion-col {
+    padding: 8px;
+  }
+}
+
+.vazio {
+  text-align: center;
+  color: var(--ion-color-medium);
+  padding: 24px;
+}

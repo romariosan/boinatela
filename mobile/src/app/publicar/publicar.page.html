@@ -1,0 +1,178 @@
+<ion-header [translucent]="true">
+  <ion-toolbar color="primary">
+    <ion-buttons slot="start">
+      <ion-back-button defaultHref="/tabs/tab3"></ion-back-button>
+    </ion-buttons>
+    <ion-title>{{ editando ? 'Editar anúncio' : 'Publicar anúncio' }}</ion-title>
+  </ion-toolbar>
+</ion-header>
+
+<ion-content class="ion-padding">
+  <div class="carregando" *ngIf="carregandoAnuncio">
+    <ion-spinner></ion-spinner>
+  </div>
+
+  <form *ngIf="!carregandoAnuncio" [formGroup]="form" (ngSubmit)="publicar()">
+    <section class="fotos">
+      <input #seletorArquivo type="file" multiple accept="image/*" hidden (change)="aoSelecionarImagens($event)" />
+      <ion-button
+        expand="block"
+        fill="outline"
+        type="button"
+        class="botao-foto"
+        [disabled]="imagens.length >= maximoFotos"
+        (click)="escolherImagens()"
+      >
+        <ion-icon slot="start" name="camera-outline"></ion-icon>
+        {{ imagens.length ? 'Adicionar fotos' : 'Escolher fotos do animal' }} ({{ imagens.length }}/{{ maximoFotos }})
+      </ion-button>
+
+      <p class="dica" [class.erro]="tentouEnviar && !imagens.length">
+        {{
+          tentouEnviar && !imagens.length
+            ? 'Adicione pelo menos 1 foto do lote para publicar o anúncio.'
+            : 'Até ' + maximoFotos + ' fotos. A primeira é a capa do anúncio.'
+        }}
+      </p>
+
+      <div class="miniaturas" *ngIf="imagens.length">
+        <div class="miniatura" *ngFor="let foto of imagens; let i = index">
+          <img [src]="foto.url" [alt]="'Foto ' + (i + 1)" />
+          <span class="capa" *ngIf="i === 0">Capa</span>
+          <button type="button" class="remover" [attr.aria-label]="'Remover foto ' + (i + 1)" (click)="removerImagem(i)">
+            <ion-icon name="close"></ion-icon>
+          </button>
+        </div>
+      </div>
+    </section>
+
+    <ion-list lines="full">
+      <ion-item>
+        <ion-input
+          label="Título"
+          labelPlacement="stacked"
+          formControlName="titulo"
+          placeholder="Ex.: Lote de 20 bezerros Nelore"
+          [counter]="true"
+          maxlength="120"
+          errorText="Informe um título."
+        ></ion-input>
+      </ion-item>
+
+      <ion-item>
+        <ion-input
+          label="Preço"
+          labelPlacement="stacked"
+          type="text"
+          inputmode="numeric"
+          placeholder="R$ 0,00"
+          errorText="Informe um preço maior que zero."
+          [value]="precoTexto"
+          [class.ion-invalid]="precoInvalido"
+          [class.ion-touched]="precoInvalido"
+          (ionInput)="aoDigitarPreco($event)"
+          (ionBlur)="form.controls.preco.markAsTouched()"
+        ></ion-input>
+      </ion-item>
+
+      <ion-item>
+        <ion-select
+          label="Tipo de venda"
+          labelPlacement="stacked"
+          formControlName="tipoVenda"
+          interface="action-sheet"
+          [interfaceOptions]="{ header: 'Tipo de venda' }"
+          cancelText="Cancelar"
+          okText="Confirmar"
+        >
+          <ion-select-option *ngFor="let item of tiposVenda" [value]="item">{{ rotulos[item] }}</ion-select-option>
+        </ion-select>
+      </ion-item>
+
+      <ion-item>
+        <ion-select
+          label="Categoria"
+          labelPlacement="stacked"
+          formControlName="categoriaAnimal"
+          interface="action-sheet"
+          [interfaceOptions]="{ header: 'Categoria' }"
+          cancelText="Cancelar"
+          okText="Confirmar"
+        >
+          <ion-select-option *ngFor="let item of categorias" [value]="item">{{ rotulos[item] }}</ion-select-option>
+        </ion-select>
+      </ion-item>
+
+      <ion-item>
+        <ion-select
+          label="Raça"
+          labelPlacement="stacked"
+          formControlName="raca"
+          interface="action-sheet"
+          [interfaceOptions]="{ header: 'Raça' }"
+          cancelText="Cancelar"
+          okText="Confirmar"
+        >
+          <ion-select-option *ngFor="let item of racas" [value]="item">{{ rotulos[item] }}</ion-select-option>
+        </ion-select>
+      </ion-item>
+
+      <ion-item>
+        <ion-select
+          label="Aptidão"
+          labelPlacement="stacked"
+          formControlName="aptidao"
+          interface="action-sheet"
+          [interfaceOptions]="{ header: 'Aptidão' }"
+          cancelText="Cancelar"
+          okText="Confirmar"
+        >
+          <ion-select-option *ngFor="let item of aptidoes" [value]="item">{{ rotulos[item] }}</ion-select-option>
+        </ion-select>
+      </ion-item>
+
+      <ion-item>
+        <ion-select
+          label="Estado (UF)"
+          labelPlacement="stacked"
+          formControlName="uf"
+          interface="action-sheet"
+          [interfaceOptions]="{ header: 'Estado (UF)' }"
+          cancelText="Cancelar"
+          okText="Confirmar"
+          (ionChange)="aoMudarUf($event)"
+        >
+          <ion-select-option *ngFor="let uf of ufs" [value]="uf.sigla">{{ uf.nome }} ({{ uf.sigla }})</ion-select-option>
+        </ion-select>
+      </ion-item>
+
+      <ion-item button [detail]="false" class="campo-cidade" [class.invalido]="cidadeInvalida" (click)="escolherCidade()">
+        <ion-label>
+          <p class="rotulo">Cidade</p>
+          <h3 [class.vazio]="!form.controls.cidade.value">
+            {{ form.controls.cidade.value || 'Toque para escolher a cidade' }}
+          </h3>
+        </ion-label>
+        <ion-icon slot="end" name="chevron-down-outline"></ion-icon>
+      </ion-item>
+      <p class="erro-campo" *ngIf="cidadeInvalida">Escolha a cidade.</p>
+
+      <ion-item>
+        <ion-textarea
+          label="Descrição (opcional)"
+          labelPlacement="stacked"
+          formControlName="descricao"
+          [autoGrow]="true"
+          [counter]="true"
+          maxlength="4000"
+          placeholder="Idade, peso médio, vacinação, condições de retirada..."
+        ></ion-textarea>
+      </ion-item>
+    </ion-list>
+
+    <ion-button expand="block" type="submit" class="botao-publicar" [disabled]="enviando">
+      <ion-spinner *ngIf="enviando" slot="start" name="crescent"></ion-spinner>
+      {{ enviando ? 'Salvando...' : editando ? 'Salvar alterações' : 'Publicar' }}
+    </ion-button>
+  </form>
+</ion-content>

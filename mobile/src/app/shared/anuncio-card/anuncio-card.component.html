@@ -1,0 +1,14 @@
+<ion-card class="card-anuncio" button (click)="abrir.emit(anuncio.id)">
+  <img
+    class="foto"
+    [src]="anuncio.fotos[0] || fotoPlaceholder"
+    [alt]="anuncio.titulo"
+    loading="lazy"
+    (error)="usarPlaceholder($event)"
+  />
+  <ion-card-content>
+    <h2 class="titulo">{{ anuncio.titulo }}</h2>
+    <p class="preco">{{ precoLabel }}</p>
+    <p class="cidade">{{ anuncio.cidade }}</p>
+  </ion-card-content>
+</ion-card>

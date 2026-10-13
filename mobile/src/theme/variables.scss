@@ -1,0 +1,36 @@
+:root {
+  /* Verde Agro (Marca/Cabeçalhos/Estrutura) */
+  --ion-color-primary: #1e5e3a;
+  --ion-color-primary-rgb: 30, 94, 58;
+  --ion-color-primary-contrast: #ffffff;
+  --ion-color-primary-contrast-rgb: 255, 255, 255;
+  --ion-color-primary-shade: #1a5333;
+  --ion-color-primary-tint: #346e4d;
+
+  /* Verde Vibrante (Preços, Badges e Destaques Financeiros) */
+  --ion-color-success: #22c55e;
+  --ion-color-success-rgb: 34, 197, 94;
+  --ion-color-success-contrast: #000000;
+  --ion-color-success-contrast-rgb: 0, 0, 0;
+  --ion-color-success-shade: #1ead53;
+  --ion-color-success-tint: #38cb6e;
+
+  /* Verde Oficial do WhatsApp (Exclusivo para Botões de Conversa e Login) */
+  --color-whatsapp: #25d366;
+  --color-whatsapp-hover: #20bd5a;
+  --color-whatsapp-contrast: #000000;
+}
+
+/* Mesma especificidade da paleta dark do Ionic (:root.md / :root.ios), carregada antes em global.scss. */
+:root,
+:root.md,
+:root.ios {
+  /* Neutros e Fundo Dark Mode */
+  --ion-background-color: #121212;
+  --ion-background-color-rgb: 18, 18, 18;
+  --ion-text-color: #e0e0e0;
+  --ion-text-color-rgb: 224, 224, 224;
+  --ion-card-background: #1e1e1e;
+  --ion-item-background: #1e1e1e;
+  --ion-tab-bar-color-selected: var(--ion-color-success);
+}

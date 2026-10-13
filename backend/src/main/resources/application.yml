@@ -1,0 +1,41 @@
+spring:
+  application:
+    name: boi-na-tela
+  datasource:
+    url: jdbc:postgresql://localhost:5432/boinatela
+    username: boinatela
+    password: boinatela
+  jpa:
+    hibernate:
+      ddl-auto: update
+    open-in-view: false
+    properties:
+      hibernate:
+        format_sql: true
+    show-sql: false
+  servlet:
+    multipart:
+      max-file-size: 10MB
+      max-request-size: 52MB
+
+server:
+  port: 8080
+
+app:
+  uploads:
+    dir: uploads
+  jwt:
+    secret: "boi-na-tela-dev-secret-key-mude-em-producao-256bits!"
+    expiration-ms: 86400000
+  whatsapp:
+    # Sem valor, POST /api/webhook/whatsapp responde 503. Nunca deixar um padrão fixo aqui.
+    webhook-token: ${WHATSAPP_WEBHOOK_TOKEN:}
+    bot-url: ${WHATSAPP_BOT_URL:}
+    bot-token: ${WHATSAPP_BOT_TOKEN:}
+    # true só em desenvolvimento sem bot: o código do "Esqueci minha senha" vai para o log.
+    envio-no-log: ${WHATSAPP_ENVIO_NO_LOG:false}
+  cors:
+    allowed-origins:
+      - http://localhost:8100
+      - http://localhost:4200
+      - http://127.0.0.1:8100

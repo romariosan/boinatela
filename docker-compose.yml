@@ -1,0 +1,15 @@
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: boinatela-postgres
+    environment:
+      POSTGRES_DB: boinatela
+      POSTGRES_USER: boinatela
+      POSTGRES_PASSWORD: boinatela
+    ports:
+      - "5432:5432"
+    volumes:
+      - boinatela_pg:/var/lib/postgresql/data
+
+volumes:
+  boinatela_pg:

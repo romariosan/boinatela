@@ -1,0 +1,29 @@
+<ion-header>
+  <ion-toolbar color="primary">
+    <ion-title>Confirmar WhatsApp</ion-title>
+    <ion-buttons slot="end">
+      <ion-button (click)="fechar()">Agora não</ion-button>
+    </ion-buttons>
+  </ion-toolbar>
+</ion-header>
+
+<ion-content class="ion-padding">
+  <div class="conteudo">
+    <ion-icon class="icone" name="shield-checkmark-outline" aria-hidden="true"></ion-icon>
+    <h2>Confirme que o número é seu</h2>
+    <p class="mensagem">Para sua segurança e dos compradores, confirme que este WhatsApp pertence a você.</p>
+    <p class="passos">Toque no botão, envie a mensagem que já vem pronta e volte para o app. A confirmação é automática.</p>
+
+    <ion-button expand="block" class="botao-whatsapp" (click)="confirmar()">
+      <ion-icon slot="start" name="logo-whatsapp"></ion-icon>
+      Confirmar no meu WhatsApp
+    </ion-button>
+
+    <p class="codigo">Código: <strong>{{ codigo }}</strong></p>
+
+    <p class="aguardando" *ngIf="abriuWhatsapp" role="status">
+      <ion-spinner name="dots"></ion-spinner>
+      Aguardando a confirmação...
+    </p>
+  </div>
+</ion-content>

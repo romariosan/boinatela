@@ -1,0 +1,115 @@
+<ion-header [translucent]="true">
+  <ion-toolbar color="primary">
+    <ion-title>Conta</ion-title>
+  </ion-toolbar>
+</ion-header>
+
+<ion-content [fullscreen]="true">
+  <ng-container *ngIf="usuario$ | async as usuario; else visitante">
+    <section class="perfil">
+      <div class="avatar" aria-hidden="true">{{ iniciais(usuario.nome) }}</div>
+      <div class="dados">
+        <h2>{{ usuario.nome }}</h2>
+        <p>
+          <ion-icon name="logo-whatsapp"></ion-icon>
+          {{ formatarWhatsapp(usuario.whatsapp) }}
+        </p>
+        <p *ngIf="usuario.telefoneVerificado; else naoVerificado">
+          <ion-icon name="shield-checkmark-outline"></ion-icon>
+          WhatsApp verificado
+        </p>
+        <ng-template #naoVerificado>
+          <ion-button size="small" fill="outline" (click)="verificarWhatsapp()">Confirmar meu WhatsApp</ion-button>
+        </ng-template>
+      </div>
+    </section>
+
+    <div class="ion-padding-horizontal">
+      <ion-button expand="block" (click)="publicar()">
+        <ion-icon slot="start" name="add-circle-outline"></ion-icon>
+        Publicar anúncio
+      </ion-button>
+    </div>
+
+    <ion-list-header>
+      <ion-label>Meus anúncios</ion-label>
+      <ion-badge *ngIf="meusAnuncios.length" color="success">{{ meusAnuncios.length }}</ion-badge>
+    </ion-list-header>
+
+    <div class="carregando" *ngIf="carregandoAnuncios && !meusAnuncios.length">
+      <ion-spinner></ion-spinner>
+    </div>
+
+    <div class="meus-anuncios" *ngIf="meusAnuncios.length">
+      <ion-card *ngFor="let anuncio of meusAnuncios" class="meu-anuncio" [class.vendido]="anuncio.status === 'VENDIDO'">
+        <button type="button" class="resumo" (click)="verAnuncio(anuncio.id)">
+          <span class="foto">
+            <img [src]="anuncio.fotos[0] || fotoPlaceholder" [alt]="anuncio.titulo" (error)="usarPlaceholder($event)" />
+            <span class="selo-vendido" *ngIf="anuncio.status === 'VENDIDO'">VENDIDO</span>
+          </span>
+          <span class="info">
+            <span class="titulo">{{ anuncio.titulo }}</span>
+            <span class="preco">{{ precoLabel(anuncio) }}</span>
+            <span class="meta">{{ anuncio.cidade }} · {{ rotulos[anuncio.categoriaAnimal] }}</span>
+          </span>
+        </button>
+
+        <div class="acoes">
+          <ion-button fill="clear" color="medium" [disabled]="ocupado === anuncio.id" (click)="editar(anuncio.id)">
+            <span class="acao">
+              <ion-icon name="create-outline"></ion-icon>
+              Editar
+            </span>
+          </ion-button>
+          <ion-button
+            fill="clear"
+            color="success"
+            [disabled]="ocupado === anuncio.id"
+            (click)="alternarVendido(anuncio)"
+          >
+            <span class="acao">
+              <ion-icon [name]="anuncio.status === 'VENDIDO' ? 'refresh-outline' : 'pricetag-outline'"></ion-icon>
+              {{ anuncio.status === 'VENDIDO' ? 'Reativar' : 'Marcar como vendido' }}
+            </span>
+          </ion-button>
+          <ion-button
+            fill="clear"
+            color="danger"
+            [disabled]="ocupado === anuncio.id"
+            (click)="confirmarExclusao(anuncio)"
+          >
+            <span class="acao">
+              <ion-icon name="trash-outline"></ion-icon>
+              Excluir
+            </span>
+          </ion-button>
+        </div>
+      </ion-card>
+    </div>
+
+    <p class="vazio" *ngIf="!carregandoAnuncios && !meusAnuncios.length">
+      Você ainda não publicou nenhum anúncio.
+    </p>
+
+    <div class="ion-padding">
+      <ion-button expand="block" fill="outline" color="danger" (click)="sair()">
+        <ion-icon slot="start" name="log-out-outline"></ion-icon>
+        Sair da conta
+      </ion-button>
+    </div>
+  </ng-container>
+
+  <ng-template #visitante>
+    <div class="ion-padding">
+      <h2>Navegue sem cadastro</h2>
+      <p class="texto">
+        A vitrine e a busca são livres. Login só entra na hora de falar com o vendedor ou publicar.
+      </p>
+      <ion-button expand="block" class="botao-whatsapp" (click)="entrar()">
+        <ion-icon slot="start" name="logo-whatsapp"></ion-icon>
+        Entrar com WhatsApp
+      </ion-button>
+      <ion-button expand="block" fill="outline" (click)="publicar()">Publicar anúncio</ion-button>
+    </div>
+  </ng-template>
+</ion-content>

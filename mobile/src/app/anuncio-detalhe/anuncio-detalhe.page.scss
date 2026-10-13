@@ -1,0 +1,60 @@
+.foto {
+  display: block;
+  width: 100%;
+  max-width: 640px;
+  margin: 0 auto;
+  aspect-ratio: 4 / 3;
+  object-fit: cover;
+}
+
+.galeria {
+  display: block;
+  max-width: 640px;
+  margin: 0 auto;
+  --swiper-pagination-color: var(--ion-color-success);
+  --swiper-pagination-bullet-inactive-color: #ffffff;
+  --swiper-pagination-bullet-inactive-opacity: 0.6;
+  --swiper-pagination-bullet-size: 9px;
+}
+
+.midia {
+  position: relative;
+  max-width: 640px;
+  margin: 0 auto;
+}
+
+.selo-vendido {
+  position: absolute;
+  top: 16px;
+  left: 0;
+  z-index: 2;
+  padding: 6px 16px;
+  border-radius: 0 8px 8px 0;
+  font-size: 0.85rem;
+}
+
+.titulo {
+  margin: 0 0 8px;
+  font-size: 1.3rem;
+  font-weight: 700;
+}
+
+.preco {
+  margin: 0 0 4px;
+  font-size: 1.6rem;
+  font-weight: 800;
+  color: var(--ion-color-success);
+}
+
+.meta {
+  margin: 0 0 8px;
+  color: var(--ion-color-medium);
+}
+
+.tags {
+  margin: 8px 0;
+}
+
+.descricao {
+  line-height: 1.5;
+}
