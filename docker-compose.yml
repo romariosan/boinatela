@@ -1,15 +1,16 @@
 services:
   postgres:
     image: postgres:16-alpine
-    container_name: boinatela-postgres
+    container_name: compregado-postgres-dev
     environment:
-      POSTGRES_DB: boinatela
-      POSTGRES_USER: boinatela
-      POSTGRES_PASSWORD: boinatela
+      POSTGRES_DB: compregado
+      POSTGRES_USER: compregado
+      POSTGRES_PASSWORD: compregado
     ports:
       - "5432:5432"
     volumes:
-      - boinatela_pg:/var/lib/postgresql/data
+      - compregado_pg:/var/lib/postgresql/data
 
 volumes:
-  boinatela_pg:
+  compregado_pg:
+    name: compregado_pg_dev

@@ -28,5 +28,6 @@ npm-debug.log*
 # Env / secrets
 .env
 .env.local
+.env.teste
 backend/src/main/resources/application-local.yml
 .webhook-token-dev.txt

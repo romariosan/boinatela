@@ -1,33 +1,33 @@
 #!/usr/bin/env bash
 # =============================================================================================
-# Backup completo do Boi na Tela, cada execução numa pasta /var/backups/boinatela/AAAA-MM-DD_HHMMSS:
-#   banco_boinatela.sql.gz       dump do banco da API (usuários, anúncios, códigos)
+# Backup completo do CompreGado, cada execução numa pasta /var/backups/compregado/AAAA-MM-DD_HHMMSS:
+#   banco_compregado.sql.gz      dump do banco da API (usuários, anúncios, códigos)
 #   banco_evolution.sql.gz       dump do banco da Evolution (instância e credenciais do WhatsApp)
 #   whatsapp_instances.tar.gz    volume de sessões do WhatsApp (chaves de criptografia)
 #   fotos_uploads.tar.gz         fotos dos anúncios
 # Pastas com mais de RETENCAO_DIAS dias (padrão 7) são apagadas no fim.
 #
 # Rodar à mão (na VPS):
-#   sudo /opt/boinatela/deploy/scripts/backup-full.sh
+#   sudo /opt/compregado/deploy/scripts/backup-full.sh
 #
 # Agendar no cron do root (todo dia às 03:00):
-#   sudo chmod +x /opt/boinatela/deploy/scripts/backup-full.sh
+#   sudo chmod +x /opt/compregado/deploy/scripts/backup-full.sh
 #   sudo crontab -e
 #   # adicione a linha abaixo, salve e saia:
-#   0 3 * * * /opt/boinatela/deploy/scripts/backup-full.sh >> /var/log/boinatela-backup.log 2>&1
+#   0 3 * * * /opt/compregado/deploy/scripts/backup-full.sh >> /var/log/compregado-backup.log 2>&1
 # Conferir:
 #   sudo crontab -l
-#   ls -lh /var/backups/boinatela/
-#   tail -n 30 /var/log/boinatela-backup.log
+#   ls -lh /var/backups/compregado/
+#   tail -n 30 /var/log/compregado-backup.log
 #
 # Os arquivos contêm a sessão do WhatsApp do bot e dados pessoais: ficam só para o root (umask 077).
 # Um backup só na própria VPS não protege contra perda da VPS: copie para fora de vez em quando, ex.:
-#   scp -r root@IP-DA-VPS:/var/backups/boinatela/AAAA-MM-DD_HHMMSS .
+#   scp -r root@IP-DA-VPS:/var/backups/compregado/AAAA-MM-DD_HHMMSS .
 # =============================================================================================
 set -Eeuo pipefail
 
 DIR_DEPLOY="$(cd "$(dirname "$0")/.." && pwd)"
-DESTINO="${BACKUP_DIR:-/var/backups/boinatela}"
+DESTINO="${BACKUP_DIR:-/var/backups/compregado}"
 RETENCAO_DIAS="${RETENCAO_DIAS:-7}"
 PASTA="$DESTINO/$(date +%Y-%m-%d_%H%M%S)"
 
@@ -49,9 +49,11 @@ trap 'log "ERRO na linha $LINENO. Backup descartado: $PASTA"; rm -rf "$PASTA"' E
 cd "$DIR_DEPLOY"
 ler() { sed -n "s/^$1=//p" .env | tail -n 1 | tr -d '\r'; }
 PG_USER="$(ler POSTGRES_USER)"
-PG_USER="${PG_USER:-boinatela}"
+PG_USER="${PG_USER:-compregado}"
 PG_DB="$(ler POSTGRES_DB)"
-PG_DB="${PG_DB:-boinatela}"
+PG_DB="${PG_DB:-compregado}"
+STACK="$(ler STACK_NOME)"
+STACK="${STACK:-compregado}"
 
 mkdir -p "$PASTA"
 log "Início do backup em $PASTA"
@@ -74,8 +76,8 @@ copiar_volume() {
     -v "$PASTA":/destino \
     alpine:3.20 tar -czf "/destino/$arquivo" -C /origem .
 }
-copiar_volume boinatela_evolution_instances whatsapp_instances.tar.gz
-copiar_volume boinatela_uploads fotos_uploads.tar.gz
+copiar_volume "${STACK}_evolution_instances" whatsapp_instances.tar.gz
+copiar_volume "${STACK}_uploads" fotos_uploads.tar.gz
 
 # O container auxiliar não herda o umask: restringe os arquivos dele também.
 chmod 600 "$PASTA"/*

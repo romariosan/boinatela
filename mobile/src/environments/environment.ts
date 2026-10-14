@@ -4,7 +4,7 @@
 
 export const environment = {
   production: false,
-  apiUrl: 'https://72-60-44-212.sslip.io',
+  apiUrl: 'http://localhost:8080',
   /** Número do bot que recebe o código de verificação (DDI + DDD + número). */
   whatsappVerificacao: '556199999999',
 };

@@ -4,7 +4,7 @@ import { BehaviorSubject, Observable, distinctUntilChanged, firstValueFrom, map 
 import { environment } from '../../environments/environment';
 import { AuthPayload, VerificacaoStatus } from '../models/anuncio';
 
-const STORAGE_KEY = 'boi-na-tela-auth';
+const STORAGE_KEY = 'compregado-auth';
 
 @Injectable({ providedIn: 'root' })
 export class AuthService {

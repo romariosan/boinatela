@@ -44,7 +44,7 @@ export class VerificarWhatsappComponent implements OnInit, OnDestroy {
   }
 
   confirmar(): void {
-    const texto = 'Quero+confirmar+meu+cadastro+no+Boi+na+Tela.+Codigo:+' + encodeURIComponent(this.codigo);
+    const texto = 'Quero+confirmar+meu+cadastro+no+CompreGado.+Codigo:+' + encodeURIComponent(this.codigo);
     const numero = this.numeroBot || environment.whatsappVerificacao;
     window.open(`https://wa.me/${numero}?text=${texto}`, '_system');
     this.abriuWhatsapp = true;

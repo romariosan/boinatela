@@ -1,4 +1,0 @@
-{$API_DOMAIN} {
-	encode gzip
-	reverse_proxy boinatela-api:8080
-}

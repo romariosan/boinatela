@@ -1,10 +1,10 @@
 spring:
   application:
-    name: boi-na-tela
+    name: compregado
   datasource:
-    url: jdbc:postgresql://localhost:5432/boinatela
-    username: boinatela
-    password: boinatela
+    url: jdbc:postgresql://localhost:5432/compregado
+    username: compregado
+    password: compregado
   jpa:
     hibernate:
       ddl-auto: update
@@ -25,7 +25,7 @@ app:
   uploads:
     dir: uploads
   jwt:
-    secret: "boi-na-tela-dev-secret-key-mude-em-producao-256bits!"
+    secret: "compregado-dev-secret-key-mude-em-producao-256bits!"
     expiration-ms: 86400000
   whatsapp:
     # Sem valor, POST /api/webhook/whatsapp responde 503. Nunca deixar um padrão fixo aqui.
@@ -33,7 +33,7 @@ app:
     # Evolution API: URL base, chave (apikey), instância e número conectado (com DDI).
     bot-url: ${WHATSAPP_BOT_URL:}
     bot-token: ${WHATSAPP_BOT_TOKEN:}
-    bot-instancia: ${WHATSAPP_BOT_INSTANCIA:boinatela}
+    bot-instancia: ${WHATSAPP_BOT_INSTANCIA:compregado}
     bot-numero: ${WHATSAPP_BOT_NUMERO:}
     # true só em desenvolvimento sem bot: o código do "Esqueci minha senha" vai para o log.
     envio-no-log: ${WHATSAPP_ENVIO_NO_LOG:false}

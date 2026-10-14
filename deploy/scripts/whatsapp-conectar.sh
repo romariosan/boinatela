@@ -1,5 +1,5 @@
 #!/usr/bin/env sh
-# Liga o WhatsApp do Boi na Tela na Evolution API e aponta o webhook para a API. Idempotente.
+# Liga o WhatsApp do CompreGado na Evolution API e aponta o webhook para a API. Idempotente.
 #   sh scripts/whatsapp-conectar.sh                 -> mostra o QR Code no terminal (apt install -y qrencode)
 #   sh scripts/whatsapp-conectar.sh 5561999999999   -> mostra um código de 8 caracteres para digitar no celular
 #   sh scripts/whatsapp-conectar.sh status          -> "open" = conectado
@@ -10,10 +10,10 @@ ler() { sed -n "s/^$1=//p" .env | tail -n 1 | tr -d '\r'; }
 CHAVE="$(ler EVOLUTION_API_KEY)"
 TOKEN="$(ler WHATSAPP_WEBHOOK_TOKEN)"
 INSTANCIA="$(ler EVOLUTION_INSTANCIA)"
-INSTANCIA="${INSTANCIA:-boinatela}"
+INSTANCIA="${INSTANCIA:-compregado}"
 PORTA="$(ler EVOLUTION_PORT)"
 EVO="http://127.0.0.1:${PORTA:-8081}"
-WEBHOOK="http://boinatela-api:8080/api/webhook/evolution"
+WEBHOOK="http://compregado-api:8080/api/webhook/evolution"
 
 if [ -z "$CHAVE" ] || [ -z "$TOKEN" ]; then
   echo "Preencha EVOLUTION_API_KEY e WHATSAPP_WEBHOOK_TOKEN no .env e rode 'docker compose up -d' antes." >&2

@@ -96,7 +96,7 @@ export class AuthModalComponent implements OnDestroy {
         await this.auth.login(this.whatsapp, this.senha);
       }
       await this.modalCtrl.dismiss({ ok: true });
-      await this.avisar('Bem-vindo ao Boi na Tela!', 'success', 'top');
+      await this.avisar('Bem-vindo ao CompreGado!', 'success', 'top');
       if (cadastro) {
         void this.verificacao.exigirVerificacao();
       }

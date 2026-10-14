@@ -2,7 +2,7 @@
 # Executado pelo serviço "postgres-init" a cada "docker compose up". Idempotente:
 #   - cria o usuário "evolution" (ou atualiza a senha para a do .env, permitindo trocar a senha);
 #   - cria o banco "evolution" com esse dono, se ainda não existir.
-# A Evolution só enxerga o próprio banco; a API do Boi na Tela continua com o usuário principal.
+# A Evolution só enxerga o próprio banco; a API do CompreGado continua com o usuário principal.
 set -eu
 
 psql -v ON_ERROR_STOP=1 -v senha="$EVOLUTION_DB_PASSWORD" -v principal="$PGDATABASE" <<'SQL'

@@ -1,5 +1,5 @@
 {
-  "name": "boi-na-tela-mobile",
+  "name": "compregado",
   "version": "0.0.1",
   "author": "Ionic Framework",
   "homepage": "https://ionicframework.com/",
@@ -46,5 +46,5 @@
     "typescript-eslint": "^8.61.0",
     "vitest": "~4.0.18"
   },
-  "description": "An Ionic project"
+  "description": "CompreGado - classificados de gado"
 }

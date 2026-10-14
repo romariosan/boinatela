@@ -1,5 +1,5 @@
 -- Rodar com a API parada:
---   docker exec -i boinatela-postgres psql -U boinatela -d boinatela -v ON_ERROR_STOP=1 < backend/db/2026-10-13-racas-status-cidade-uf.sql
+--   docker exec -i compregado-postgres-dev psql -U compregado -d compregado -v ON_ERROR_STOP=1 < backend/db/2026-10-13-racas-status-cidade-uf.sql
 -- O ddl-auto=update do Hibernate não recria os CHECKs de enum nem converte dados existentes.
 BEGIN;
 
