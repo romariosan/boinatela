@@ -68,6 +68,21 @@ npm start
 
 Usuário de seed (não é criado no perfil `prod`): WhatsApp `61999999999`, senha `123456`.
 
+## Ícones e splash screen (Android/iOS)
+
+Fontes em `mobile/resources/` (Custom Mode do [@capacitor/assets](https://github.com/ionic-team/capacitor-assets)): `icon-only.png`, `icon-foreground.png` e `icon-background.png` (1024 × 1024, só o símbolo do logo) e `splash.png` (2732 × 2732, logo completo), com fundo creme `#F7F3EA`. Para trocar a arte, substitua esses arquivos mantendo nomes e tamanhos mínimos. Depois de criar as plataformas nativas:
+
+```bash
+cd mobile
+npm install @capacitor/android @capacitor/ios
+npx cap add android
+npx cap add ios          # o build iOS exige macOS + Xcode
+npm run assets           # = npx @capacitor/assets generate (gera para as plataformas existentes)
+npx cap sync
+```
+
+A splash screen fica 2 s na tela (`plugins.SplashScreen` em `mobile/capacitor.config.ts`).
+
 ## Regras de segurança da API
 
 - `GET /api/anuncios` e `GET /api/anuncios/{id}` — `permitAll`. O `q` é quebrado em palavras (ex.: `Bezerros Nelore, Formosa`) e cada uma precisa aparecer no título, descrição, cidade ou no nome da categoria/raça/aptidão; `cidade` é comparada inteira (`Formosa - GO`); `uf` (ex.: `GO`) filtra pelo sufixo da cidade.

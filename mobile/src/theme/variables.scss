@@ -1,11 +1,23 @@
 :root {
-  /* Verde Agro (Marca/Cabeçalhos/Estrutura) */
-  --ion-color-primary: #1e5e3a;
-  --ion-color-primary-rgb: 30, 94, 58;
+  /* Paleta do logo CompreGado. shade = 12% de preto e tint = 10% de branco (fórmula do Ionic);
+     em hex, e não color-mix(), porque o Ionic também precisa da versão -rgb e WebViews antigas
+     do Android não suportam color-mix(). */
+
+  /* Verde CompreGado (Marca/Cabeçalhos/Estrutura) */
+  --ion-color-primary: #1f4931;
+  --ion-color-primary-rgb: 31, 73, 49;
   --ion-color-primary-contrast: #ffffff;
   --ion-color-primary-contrast-rgb: 255, 255, 255;
-  --ion-color-primary-shade: #1a5333;
-  --ion-color-primary-tint: #346e4d;
+  --ion-color-primary-shade: #1b402b;
+  --ion-color-primary-tint: #355b46;
+
+  /* Marrom Terra (carrinho e "Gado" do logo; detalhes e ações secundárias da marca) */
+  --ion-color-secondary: #71502f;
+  --ion-color-secondary-rgb: 113, 80, 47;
+  --ion-color-secondary-contrast: #ffffff;
+  --ion-color-secondary-contrast-rgb: 255, 255, 255;
+  --ion-color-secondary-shade: #634629;
+  --ion-color-secondary-tint: #7f6244;
 
   /* Verde Vibrante (Preços, Badges e Destaques Financeiros) */
   --ion-color-success: #22c55e;

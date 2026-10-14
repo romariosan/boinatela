@@ -1,3 +1,25 @@
+.marca {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  max-width: 100%;
+  vertical-align: middle;
+}
+
+.marca-logo {
+  flex-shrink: 0;
+  height: 28px;
+  width: auto;
+}
+
+.marca-nome {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-weight: 700;
+  letter-spacing: 0.2px;
+}
+
 .chips {
   display: flex;
   flex-wrap: wrap;

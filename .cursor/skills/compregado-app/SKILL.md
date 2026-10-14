@@ -54,7 +54,9 @@ Ao mudar enums de entidade, crie um script SQL em `backend/db/` (o ddl-auto não
 
 ## Design System (mobile)
 App sempre escuro (`dark.always.css`); cores em `mobile/src/theme/variables.scss`:
-- `primary` #1E5E3A (Verde Agro): toolbars, avatar, botão sólido de ação da marca. Não usar como cor de texto sobre o fundo escuro.
+- `primary` #1F4931 (Verde CompreGado, extraído do logo): toolbars, avatar, botão sólido de ação da marca. Não usar como cor de texto sobre o fundo escuro.
+- `secondary` #71502F (Marrom Terra do logo: carrinho e "Gado"): detalhes e ações secundárias da marca.
+- Ícones e splash: fontes em `mobile/resources/` (Custom Mode do @capacitor/assets: `icon-only`, `icon-foreground`, `icon-background` 1024 px e `splash` 2732 px, fundo creme #F7F3EA; o ícone usa só o símbolo, sem o texto). Gerar com `npm run assets` depois de `npx cap add android/ios`. Splash: plugin `@capacitor/splash-screen`, 2 s, `CENTER_INSIDE`.
 - `success` #22C55E (Verde Vibrante, texto preto): preços, badges, destaques, aba selecionada.
 - `--color-whatsapp` #25D366: só botões de conversa e login, via classe global `botao-whatsapp`.
 - Fundo #121212, texto #E0E0E0, cards #1E1E1E. Selo VENDIDO: classe global `selo-vendido` (cor `danger`).
