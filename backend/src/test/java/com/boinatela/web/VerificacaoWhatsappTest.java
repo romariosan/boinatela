@@ -10,6 +10,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import java.nio.charset.StandardCharsets;
+import java.util.HashMap;
 import java.util.Map;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -28,6 +29,7 @@ import org.springframework.test.web.servlet.ResultActions;
 class VerificacaoWhatsappTest {
 
     private static final String WEBHOOK = "/api/webhook/whatsapp";
+    private static final String EVOLUTION = "/api/webhook/evolution";
     private static final String TOKEN = "token-de-teste";
 
     @Autowired
@@ -85,6 +87,37 @@ class VerificacaoWhatsappTest {
     }
 
     @Test
+    void webhookDaEvolutionVerificaPeloTelefoneMesmoComLid() throws Exception {
+        JsonNode conta = cadastrar("61981110006");
+        String codigo = conta.get("codigoVerificacao").asText();
+
+        evolution(mensagemEvolution("123456789012345@lid", "5561981110006@s.whatsapp.net", false,
+                "Quero confirmar meu cadastro no Boi na Tela. Codigo: " + codigo))
+                .andExpect(jsonPath("$.verificado").value(true));
+        mvc.perform(get("/api/auth/verificar-status").header(HttpHeaders.AUTHORIZATION, bearer(conta)))
+                .andExpect(jsonPath("$.telefoneVerificado").value(true));
+    }
+
+    @Test
+    void webhookDaEvolutionIgnoraMensagemDoProprioBotELidSemTelefone() throws Exception {
+        JsonNode conta = cadastrar("61981110007");
+        String texto = "Codigo: " + conta.get("codigoVerificacao").asText();
+
+        evolution(mensagemEvolution("5561981110007@s.whatsapp.net", null, true, texto))
+                .andExpect(jsonPath("$.verificado").value(false));
+        evolution(mensagemEvolution("123456789012345@lid", null, false, texto))
+                .andExpect(jsonPath("$.verificado").value(false));
+        evolution(json.writeValueAsString(Map.of("event", "connection.update", "data", Map.of())))
+                .andExpect(jsonPath("$.verificado").value(false));
+        mvc.perform(post(EVOLUTION).contentType(MediaType.APPLICATION_JSON)
+                        .content(mensagemEvolution("5561981110007@s.whatsapp.net", null, false, texto)))
+                .andExpect(status().isUnauthorized());
+
+        evolution(mensagemEvolution("5561981110007@s.whatsapp.net", null, false, texto))
+                .andExpect(jsonPath("$.verificado").value(true));
+    }
+
+    @Test
     void naoVerificadoNaoPublica() throws Exception {
         JsonNode conta = cadastrar("61981110005");
         String dados = """
@@ -116,6 +149,29 @@ class VerificacaoWhatsappTest {
 
     private String mensagem(String remetente, String texto) throws Exception {
         return json.writeValueAsString(Map.of("remetente", remetente, "mensagem", texto));
+    }
+
+    private ResultActions evolution(String corpo) throws Exception {
+        return mvc.perform(post(EVOLUTION).header("X-Webhook-Token", TOKEN)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(corpo))
+                .andExpect(status().isOk());
+    }
+
+    private String mensagemEvolution(String remoteJid, String remoteJidAlt, boolean fromMe, String texto)
+            throws Exception {
+        Map<String, Object> chave = new HashMap<>(Map.of("remoteJid", remoteJid, "fromMe", fromMe, "id", "ABC123"));
+        if (remoteJidAlt != null) {
+            chave.put("remoteJidAlt", remoteJidAlt);
+        }
+        return json.writeValueAsString(Map.of(
+                "event", "messages.upsert",
+                "instance", "boinatela",
+                "data", Map.of(
+                        "key", chave,
+                        "pushName", "Teste",
+                        "message", Map.of("extendedTextMessage", Map.of("text", texto)),
+                        "messageType", "extendedTextMessage")));
     }
 
     private static String bearer(JsonNode conta) {

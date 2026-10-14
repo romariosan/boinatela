@@ -8,11 +8,17 @@ public class WhatsappProperties {
     /** Segredo que o bot manda no header X-Webhook-Token. Vazio = webhook desligado. */
     private String webhookToken = "";
 
-    /** Endpoint do bot que dispara mensagens (POST {"numero","mensagem"}). Vazio = sem envio. */
+    /** URL base da Evolution API, ex.: http://evolution:8080. Vazio = sem envio. */
     private String botUrl = "";
 
-    /** Segredo que a API manda ao bot no header X-Bot-Token. */
+    /** Chave da Evolution API (header apikey). */
     private String botToken = "";
+
+    /** Nome da instância da Evolution conectada ao WhatsApp do Boi na Tela. */
+    private String botInstancia = "boinatela";
+
+    /** Número do WhatsApp do bot com DDI (ex.: 5561999999999), para o app abrir o wa.me. */
+    private String botNumero = "";
 
     /**
      * Só para desenvolvimento sem bot: escreve a mensagem (com o código) no log em vez de enviar.
@@ -42,6 +48,22 @@ public class WhatsappProperties {
 
     public void setBotToken(String botToken) {
         this.botToken = botToken;
+    }
+
+    public String getBotInstancia() {
+        return botInstancia;
+    }
+
+    public void setBotInstancia(String botInstancia) {
+        this.botInstancia = botInstancia;
+    }
+
+    public String getBotNumero() {
+        return botNumero;
+    }
+
+    public void setBotNumero(String botNumero) {
+        this.botNumero = botNumero;
     }
 
     public boolean isEnvioNoLog() {

@@ -130,6 +130,8 @@ export interface VerificacaoStatus {
   telefoneVerificado: boolean;
   /** Ex.: BT-482913. Nulo depois de verificado. */
   codigoVerificacao: string | null;
+  /** Número do bot com DDI; nulo se a API não tiver WHATSAPP_BOT_NUMERO (usa o do environment). */
+  whatsappBot?: string | null;
 }
 
 export interface AnuncioFiltro {

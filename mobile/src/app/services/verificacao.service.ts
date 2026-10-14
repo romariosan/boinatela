@@ -47,7 +47,7 @@ export class VerificacaoService {
 
     const modal = await this.modalCtrl.create({
       component: VerificarWhatsappComponent,
-      componentProps: { codigo: status.codigoVerificacao },
+      componentProps: { codigo: status.codigoVerificacao, numeroBot: status.whatsappBot },
       breakpoints: [0, 0.75, 1],
       initialBreakpoint: 0.75,
       handle: true,

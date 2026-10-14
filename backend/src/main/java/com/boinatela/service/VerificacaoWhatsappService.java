@@ -1,5 +1,6 @@
 package com.boinatela.service;
 
+import com.boinatela.config.WhatsappProperties;
 import com.boinatela.domain.Usuario;
 import com.boinatela.repository.UsuarioRepository;
 import com.boinatela.web.dto.VerificacaoStatusResponse;
@@ -26,9 +27,11 @@ public class VerificacaoWhatsappService {
     private static final SecureRandom RANDOM = new SecureRandom();
 
     private final UsuarioRepository usuarioRepository;
+    private final WhatsappProperties propriedades;
 
-    public VerificacaoWhatsappService(UsuarioRepository usuarioRepository) {
+    public VerificacaoWhatsappService(UsuarioRepository usuarioRepository, WhatsappProperties propriedades) {
         this.usuarioRepository = usuarioRepository;
+        this.propriedades = propriedades;
     }
 
     static String gerarCodigo() {
@@ -55,7 +58,11 @@ public class VerificacaoWhatsappService {
         Usuario usuario = usuarioRepository.findById(autenticado.getId())
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.UNAUTHORIZED));
         garantirCodigo(usuario);
-        return new VerificacaoStatusResponse(usuario.isTelefoneVerificado(), usuario.getCodigoVerificacao());
+        String numeroBot = propriedades.getBotNumero().replaceAll("\\D", "");
+        return new VerificacaoStatusResponse(
+                usuario.isTelefoneVerificado(),
+                usuario.getCodigoVerificacao(),
+                numeroBot.isEmpty() ? null : numeroBot);
     }
 
     @Transactional

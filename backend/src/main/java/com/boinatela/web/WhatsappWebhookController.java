@@ -1,8 +1,10 @@
 package com.boinatela.web;
 
 import com.boinatela.config.WhatsappProperties;
+import com.boinatela.service.EvolutionWebhookService;
 import com.boinatela.service.VerificacaoWhatsappService;
 import com.boinatela.web.dto.WhatsappWebhookRequest;
+import com.fasterxml.jackson.databind.JsonNode;
 import jakarta.validation.Valid;
 import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
@@ -23,17 +25,36 @@ public class WhatsappWebhookController {
 
     private final WhatsappProperties propriedades;
     private final VerificacaoWhatsappService verificacao;
+    private final EvolutionWebhookService evolution;
 
-    public WhatsappWebhookController(WhatsappProperties propriedades, VerificacaoWhatsappService verificacao) {
+    public WhatsappWebhookController(
+            WhatsappProperties propriedades,
+            VerificacaoWhatsappService verificacao,
+            EvolutionWebhookService evolution) {
         this.propriedades = propriedades;
         this.verificacao = verificacao;
+        this.evolution = evolution;
     }
 
-    /** Responde 200 mesmo sem código válido: o bot não deve reenviar mensagens comuns. */
+    /** Formato simples, usado para simular o bot. Responde 200 mesmo sem código válido. */
     @PostMapping("/api/webhook/whatsapp")
     public Map<String, Boolean> receber(
             @RequestHeader(name = "X-Webhook-Token", required = false) String token,
             @Valid @RequestBody WhatsappWebhookRequest request) {
+        validarToken(token);
+        return Map.of("verificado", verificacao.processarMensagem(request.remetente(), request.mensagem()));
+    }
+
+    /** Webhook da Evolution API (evento MESSAGES_UPSERT), com o segredo em um header customizado. */
+    @PostMapping("/api/webhook/evolution")
+    public Map<String, Boolean> receberEvolution(
+            @RequestHeader(name = "X-Webhook-Token", required = false) String token,
+            @RequestBody JsonNode evento) {
+        validarToken(token);
+        return Map.of("verificado", evolution.processar(evento));
+    }
+
+    private void validarToken(String token) {
         String esperado = propriedades.getWebhookToken();
         if (esperado == null || esperado.isBlank()) {
             throw new ResponseStatusException(HttpStatus.SERVICE_UNAVAILABLE, "Webhook do WhatsApp não configurado.");
@@ -42,6 +63,5 @@ public class WhatsappWebhookController {
                 esperado.getBytes(StandardCharsets.UTF_8), token.getBytes(StandardCharsets.UTF_8))) {
             throw new ResponseStatusException(HttpStatus.UNAUTHORIZED);
         }
-        return Map.of("verificado", verificacao.processarMensagem(request.remetente(), request.mensagem()));
     }
 }

@@ -1,47 +1,170 @@
+# Boi na Tela — stack de produção (VPS).
+#
+#   internet ──443──▶ caddy ──▶ boinatela-api ──▶ postgres (bancos "boinatela" e "evolution")
+#                                    │  ▲
+#                       sendText     ▼  │ webhook MESSAGES_UPSERT
+#                                evolution-api ──▶ servidores do WhatsApp
+#
+# Persistência: tudo que importa fica em volumes nomeados (seção "volumes" no fim).
+#   docker compose down        -> remove só os containers; os volumes ficam.
+#   docker compose down -v     -> APAGA os volumes (banco, fotos e sessão do WhatsApp). Não use em produção.
+# Portas: só o Caddy (80/443) fica aberto para a internet. Postgres e Evolution escutam apenas no
+# 127.0.0.1 da VPS (acesso administrativo por túnel SSH). O Docker ignora o UFW ao publicar portas,
+# por isso o bind em 127.0.0.1 é o que realmente protege.
+
 name: boinatela
 
+# Rotação de logs: sem isso, os logs dos containers crescem até encher o disco da VPS.
+x-logging: &logging
+  driver: json-file
+  options:
+    max-size: "10m"
+    max-file: "3"
+
+x-seguranca: &seguranca
+  restart: unless-stopped
+  logging: *logging
+  security_opt:
+    - no-new-privileges:true
+  networks:
+    - boinatela-net
+
 services:
+  # ------------------------------------------------------------------------------------------
+  # PostgreSQL único: banco "boinatela" (API) e banco "evolution" (Evolution API, usuário próprio).
+  # ------------------------------------------------------------------------------------------
   postgres:
+    <<: *seguranca
     image: postgres:16-alpine
-    restart: unless-stopped
     environment:
       POSTGRES_DB: ${POSTGRES_DB:-boinatela}
       POSTGRES_USER: ${POSTGRES_USER:-boinatela}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?defina POSTGRES_PASSWORD no .env}
     volumes:
-      - pg_data:/var/lib/postgresql/data
+      - postgres_data:/var/lib/postgresql/data
+    # Só no loopback da VPS, para um cliente SQL via túnel SSH. Nunca 0.0.0.0.
+    ports:
+      - "127.0.0.1:${POSTGRES_PORT:-5432}:5432"
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
       interval: 5s
       timeout: 3s
       retries: 20
+      start_period: 10s
 
-  api:
-    build: ../backend
-    restart: unless-stopped
+  # Roda a cada "up" e termina: cria (ou atualiza a senha de) o usuário e o banco da Evolution.
+  # O /docker-entrypoint-initdb.d do Postgres só roda com o volume vazio; este passo vale também
+  # para um volume que já tem dados.
+  postgres-init:
+    image: postgres:16-alpine
+    restart: "no"
+    logging: *logging
+    networks:
+      - boinatela-net
     depends_on:
       postgres:
         condition: service_healthy
     environment:
-      SPRING_PROFILES_ACTIVE: prod
+      PGHOST: postgres
+      PGUSER: ${POSTGRES_USER:-boinatela}
+      PGPASSWORD: ${POSTGRES_PASSWORD}
+      PGDATABASE: ${POSTGRES_DB:-boinatela}
+      EVOLUTION_DB_PASSWORD: ${EVOLUTION_DB_PASSWORD:?defina EVOLUTION_DB_PASSWORD no .env}
+    volumes:
+      - ./scripts/init-evolution-db.sh:/init-evolution-db.sh:ro
+    entrypoint: ["sh", "/init-evolution-db.sh"]
+
+  # ------------------------------------------------------------------------------------------
+  # Evolution API: o WhatsApp do bot (como um WhatsApp Web).
+  # A sessão (o "QR Code lido") fica em DUAS partes, e as duas são persistidas:
+  #   - credenciais e dados da instância no banco "evolution" (volume postgres_data);
+  #   - chaves de criptografia em /evolution/instances (volume evolution_instances).
+  # Perder qualquer uma das duas obriga a ler o QR Code de novo.
+  # ------------------------------------------------------------------------------------------
+  evolution-api:
+    <<: *seguranca
+    image: evoapicloud/evolution-api:v2.3.7
+    depends_on:
+      postgres-init:
+        condition: service_completed_successfully
+    environment:
+      SERVER_URL: ${EVOLUTION_URL:-http://localhost:8081}
+      AUTHENTICATION_API_KEY: ${EVOLUTION_API_KEY:?defina EVOLUTION_API_KEY no .env}
+      # Tem que ser "*": com uma lista, a Evolution recusa requisições sem header Origin, que são
+      # justamente as da API do Boi na Tela e do healthcheck. A proteção é a apikey + bind em 127.0.0.1.
+      CORS_ORIGIN: "*"
+      CORS_METHODS: GET,POST,PUT,DELETE
+      CORS_CREDENTIALS: "true"
+      # Não apagar a instância quando o celular desconecta: basta reconectar.
+      DEL_INSTANCE: "false"
+      DATABASE_ENABLED: "true"
+      DATABASE_PROVIDER: postgresql
+      # Senha só com letras e números (openssl rand -hex): ela vai dentro desta URL.
+      DATABASE_CONNECTION_URI: postgresql://evolution:${EVOLUTION_DB_PASSWORD}@postgres:5432/evolution?schema=public
+      DATABASE_CONNECTION_CLIENT_NAME: boinatela
+      DATABASE_SAVE_DATA_INSTANCE: "true"
+      DATABASE_SAVE_DATA_NEW_MESSAGE: "true"
+      DATABASE_SAVE_MESSAGE_UPDATE: "true"
+      DATABASE_SAVE_DATA_CONTACTS: "true"
+      DATABASE_SAVE_DATA_CHATS: "false"
+      DATABASE_SAVE_DATA_LABELS: "false"
+      DATABASE_SAVE_DATA_HISTORIC: "false"
+      # Sem Redis: cache em memória. A sessão continua no banco e no volume.
+      CACHE_REDIS_ENABLED: "false"
+      CACHE_LOCAL_ENABLED: "true"
+      WEBHOOK_GLOBAL_ENABLED: "false"
+      CONFIG_SESSION_PHONE_CLIENT: Boi na Tela
+      CONFIG_SESSION_PHONE_NAME: Chrome
+      LANGUAGE: pt-BR
+      LOG_LEVEL: ERROR,WARN
+    ports:
+      - "127.0.0.1:${EVOLUTION_PORT:-8081}:8080"
+    volumes:
+      - evolution_instances:/evolution/instances
+    healthcheck:
+      test: ["CMD-SHELL", "wget -q -O /dev/null http://127.0.0.1:8080/ || exit 1"]
+      interval: 15s
+      timeout: 5s
+      retries: 10
+      start_period: 60s
+    mem_limit: ${EVOLUTION_MEM_LIMIT:-768m}
+
+  # ------------------------------------------------------------------------------------------
+  # API Spring Boot (perfil prod: sem seed, segredos só por variável de ambiente).
+  # ------------------------------------------------------------------------------------------
+  boinatela-api:
+    <<: *seguranca
+    build: ../backend
+    depends_on:
+      postgres:
+        condition: service_healthy
+      evolution-api:
+        condition: service_started
+    environment:
+      SPRING_PROFILES_ACTIVE: ${SPRING_PROFILES_ACTIVE:-prod}
       DB_URL: jdbc:postgresql://postgres:5432/${POSTGRES_DB:-boinatela}
       DB_USERNAME: ${POSTGRES_USER:-boinatela}
       DB_PASSWORD: ${POSTGRES_PASSWORD}
       JWT_SECRET: ${JWT_SECRET:?defina JWT_SECRET no .env}
       CORS_ALLOWED_ORIGINS: ${CORS_ALLOWED_ORIGINS:?defina CORS_ALLOWED_ORIGINS no .env}
-      WHATSAPP_WEBHOOK_TOKEN: ${WHATSAPP_WEBHOOK_TOKEN:-}
-      WHATSAPP_BOT_URL: ${WHATSAPP_BOT_URL:-}
-      WHATSAPP_BOT_TOKEN: ${WHATSAPP_BOT_TOKEN:-}
+      WHATSAPP_WEBHOOK_TOKEN: ${WHATSAPP_WEBHOOK_TOKEN:?defina WHATSAPP_WEBHOOK_TOKEN no .env}
+      WHATSAPP_BOT_URL: http://evolution-api:8080
+      WHATSAPP_BOT_TOKEN: ${EVOLUTION_API_KEY}
+      WHATSAPP_BOT_INSTANCIA: ${EVOLUTION_INSTANCIA:-boinatela}
+      WHATSAPP_BOT_NUMERO: ${WHATSAPP_BOT_NUMERO:-}
     volumes:
       - uploads:/data/uploads
-    # O heap do Java fica em 75% deste limite; o resto da RAM é do Postgres e do sistema.
+    # O heap do Java fica em 75% deste limite; o resto da RAM é do Postgres, da Evolution e do sistema.
     mem_limit: ${API_MEM_LIMIT:-1g}
 
+  # ------------------------------------------------------------------------------------------
+  # Caddy: HTTPS automático (Let's Encrypt) na frente da API. Único serviço exposto à internet.
+  # ------------------------------------------------------------------------------------------
   caddy:
+    <<: *seguranca
     image: caddy:2-alpine
-    restart: unless-stopped
     depends_on:
-      - api
+      - boinatela-api
     ports:
       - "80:80"
       - "443:443"
@@ -53,8 +176,22 @@ services:
       - caddy_data:/data
       - caddy_config:/config
 
+networks:
+  boinatela-net:
+    name: boinatela-net
+    driver: bridge
+
+# Nomes fixos: não dependem da pasta nem do nome do projeto, e os scripts de backup os referenciam.
 volumes:
-  pg_data:
+  # Mantém o nome do volume criado pela primeira versão deste compose (dados já existentes na VPS).
+  postgres_data:
+    name: boinatela_pg_data
   uploads:
+    name: boinatela_uploads
+  evolution_instances:
+    name: boinatela_evolution_instances
+  # Certificados HTTPS: perder este volume força nova emissão (e o Let's Encrypt limita emissões).
   caddy_data:
+    name: boinatela_caddy_data
   caddy_config:
+    name: boinatela_caddy_config

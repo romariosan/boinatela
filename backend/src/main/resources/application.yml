@@ -30,8 +30,11 @@ app:
   whatsapp:
     # Sem valor, POST /api/webhook/whatsapp responde 503. Nunca deixar um padrão fixo aqui.
     webhook-token: ${WHATSAPP_WEBHOOK_TOKEN:}
+    # Evolution API: URL base, chave (apikey), instância e número conectado (com DDI).
     bot-url: ${WHATSAPP_BOT_URL:}
     bot-token: ${WHATSAPP_BOT_TOKEN:}
+    bot-instancia: ${WHATSAPP_BOT_INSTANCIA:boinatela}
+    bot-numero: ${WHATSAPP_BOT_NUMERO:}
     # true só em desenvolvimento sem bot: o código do "Esqueci minha senha" vai para o log.
     envio-no-log: ${WHATSAPP_ENVIO_NO_LOG:false}
   cors:

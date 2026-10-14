@@ -14,6 +14,7 @@ const INTERVALO_CONSULTA_MS = 3000;
 })
 export class VerificarWhatsappComponent implements OnInit, OnDestroy {
   @Input({ required: true }) codigo!: string;
+  @Input() numeroBot?: string | null;
 
   abriuWhatsapp = false;
   private timer?: ReturnType<typeof setInterval>;
@@ -44,7 +45,8 @@ export class VerificarWhatsappComponent implements OnInit, OnDestroy {
 
   confirmar(): void {
     const texto = 'Quero+confirmar+meu+cadastro+no+Boi+na+Tela.+Codigo:+' + encodeURIComponent(this.codigo);
-    window.open(`https://wa.me/${environment.whatsappVerificacao}?text=${texto}`, '_system');
+    const numero = this.numeroBot || environment.whatsappVerificacao;
+    window.open(`https://wa.me/${numero}?text=${texto}`, '_system');
     this.abriuWhatsapp = true;
   }
 

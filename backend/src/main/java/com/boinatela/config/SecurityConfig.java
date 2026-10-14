@@ -41,7 +41,7 @@ public class SecurityConfig {
                         .requestMatchers("/error").permitAll()
                         .requestMatchers(HttpMethod.GET, "/api/auth/verificar-status").authenticated()
                         .requestMatchers("/api/auth/**").permitAll()
-                        .requestMatchers(HttpMethod.POST, "/api/webhook/whatsapp").permitAll()
+                        .requestMatchers(HttpMethod.POST, "/api/webhook/whatsapp", "/api/webhook/evolution").permitAll()
                         .requestMatchers(HttpMethod.GET, "/api/anuncios/meus").authenticated()
                         .requestMatchers(HttpMethod.GET, "/api/anuncios", "/api/anuncios/*").permitAll()
                         .requestMatchers(HttpMethod.GET, "/api/categorias", "/api/cidades").permitAll()
