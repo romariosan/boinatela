@@ -93,7 +93,7 @@ export class AnuncioDetalhePage {
       const status = erro instanceof HttpErrorResponse ? erro.status : -1;
       const mensagem =
         status === 409
-          ? 'Este animal já foi vendido.'
+          ? 'Este anúncio não está mais disponível.'
           : status === 0 || !navigator.onLine
             ? 'Sem internet. Tente de novo quando tiver sinal.'
             : 'Não foi possível abrir o WhatsApp do vendedor. Tente de novo.';

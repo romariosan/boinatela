@@ -8,12 +8,14 @@ import br.com.appcompregado.domain.enums.CategoriaAnimal;
 import br.com.appcompregado.domain.enums.Raca;
 import br.com.appcompregado.repository.AnuncioBusca;
 import br.com.appcompregado.repository.AnuncioRepository;
+import br.com.appcompregado.repository.UsuarioRepository;
 import br.com.appcompregado.web.dto.AnuncioRequest;
 import br.com.appcompregado.web.dto.AnuncioResponse;
 import br.com.appcompregado.web.dto.CategoriaEstoqueResponse;
 import br.com.appcompregado.web.dto.ContatoResponse;
 import java.util.ArrayList;
 import java.util.List;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.data.domain.Sort;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
@@ -29,11 +31,19 @@ public class AnuncioService {
     public static final int MAXIMO_FOTOS = 5;
 
     private final AnuncioRepository anuncioRepository;
+    private final UsuarioRepository usuarioRepository;
     private final ArmazenamentoLocalService armazenamento;
+    private final int limiteAnunciosGratis;
 
-    public AnuncioService(AnuncioRepository anuncioRepository, ArmazenamentoLocalService armazenamento) {
+    public AnuncioService(
+            AnuncioRepository anuncioRepository,
+            UsuarioRepository usuarioRepository,
+            ArmazenamentoLocalService armazenamento,
+            @Value("${compregado.limite.anuncios.gratis}") int limiteAnunciosGratis) {
         this.anuncioRepository = anuncioRepository;
+        this.usuarioRepository = usuarioRepository;
         this.armazenamento = armazenamento;
+        this.limiteAnunciosGratis = limiteAnunciosGratis;
     }
 
     @Transactional(readOnly = true)
@@ -79,6 +89,7 @@ public class AnuncioService {
             throw new ResponseStatusException(
                     HttpStatus.PRECONDITION_REQUIRED, "Confirme seu WhatsApp antes de publicar.");
         }
+        verificarLimiteGratis(vendedor);
         List<MultipartFile> arquivos = arquivosEnviados(imagens);
         validarQuantidade(arquivos.size());
         arquivos.forEach(armazenamento::validar);
@@ -132,8 +143,28 @@ public class AnuncioService {
     @Transactional
     public AnuncioResponse alterarStatus(Long id, AnuncioStatus status, Usuario usuario) {
         Anuncio anuncio = carregarDoDono(id, usuario);
+        // Sem isto, "vender" e "reativar" contornaria o limite: o reativado volta a ocupar uma vaga.
+        if (status == AnuncioStatus.ATIVO && anuncio.getStatus() != AnuncioStatus.ATIVO) {
+            verificarLimiteGratis(usuario);
+        }
         anuncio.setStatus(status);
         return AnuncioResponse.from(anuncio);
+    }
+
+    /**
+     * Relê o vendedor do banco com trava (o do token pode ter virado PRO depois do login) e conta só os
+     * anúncios ATIVOS: o VENDIDO saiu da vitrine e libera a vaga.
+     */
+    private void verificarLimiteGratis(Usuario logado) {
+        Usuario vendedor = usuarioRepository.travarPorId(logado.getId())
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.UNAUTHORIZED));
+        if (vendedor.isPremium()) {
+            return;
+        }
+        long ativos = anuncioRepository.countByVendedorIdAndStatus(vendedor.getId(), AnuncioStatus.ATIVO);
+        if (ativos >= limiteAnunciosGratis) {
+            throw new LimiteAnunciosAtingidoException(limiteAnunciosGratis);
+        }
     }
 
     @Transactional(readOnly = true)
@@ -141,6 +172,9 @@ public class AnuncioService {
         Anuncio anuncio = carregar(id);
         if (anuncio.getStatus() == AnuncioStatus.VENDIDO) {
             throw new ResponseStatusException(HttpStatus.CONFLICT, "Este anúncio já foi vendido.");
+        }
+        if (anuncio.getStatus() == AnuncioStatus.PAUSADO) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT, "Este anúncio está pausado.");
         }
         String whatsapp = anuncio.getVendedor().getWhatsapp();
         // Cidade no texto: quem tem vários anúncios identifica o lote sem precisar perguntar.

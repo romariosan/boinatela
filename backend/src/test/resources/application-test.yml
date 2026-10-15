@@ -11,6 +11,11 @@ spring:
       hibernate:
         dialect: org.hibernate.dialect.H2Dialect
 
+compregado:
+  assinatura:
+    # Os testes chamam a rotina direto; o agendamento não pode disparar no meio deles.
+    cron: "-"
+
 app:
   uploads:
     dir: target/test-uploads

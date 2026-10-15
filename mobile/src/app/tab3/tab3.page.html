@@ -121,15 +121,19 @@
       <ion-card
         *ngFor="let anuncio of meusAnuncios; trackBy: porId"
         class="meu-anuncio"
-        [class.vendido]="anuncio.status === 'VENDIDO'"
+        [class.vendido]="anuncio.status !== 'ATIVO'"
       >
         <button type="button" class="resumo" (click)="verAnuncio(anuncio.id)" [attr.aria-label]="'Abrir ' + anuncio.titulo">
           <span class="foto">
             <img [src]="anuncio.fotos[0] || fotoPlaceholder" alt="" (error)="usarPlaceholder($event)" />
           </span>
           <span class="info">
-            <span class="status" [class.status-vendido]="anuncio.status === 'VENDIDO'">
-              {{ anuncio.status === 'VENDIDO' ? 'Vendido' : 'Na vitrine' }}
+            <span
+              class="status"
+              [class.status-vendido]="anuncio.status === 'VENDIDO'"
+              [class.status-pausado]="anuncio.status === 'PAUSADO'"
+            >
+              {{ rotuloStatus[anuncio.status] }}
             </span>
             <span class="titulo">{{ anuncio.titulo }}</span>
             <span class="preco">{{ precoLabel(anuncio) }}</span>
@@ -160,9 +164,9 @@
             <span class="acao">
               <ion-spinner *ngIf="ocupado === anuncio.id; else iconeStatus" name="crescent"></ion-spinner>
               <ng-template #iconeStatus>
-                <ion-icon [name]="anuncio.status === 'VENDIDO' ? 'refresh-outline' : 'pricetag-outline'"></ion-icon>
+                <ion-icon [name]="anuncio.status === 'ATIVO' ? 'pricetag-outline' : 'refresh-outline'"></ion-icon>
               </ng-template>
-              {{ anuncio.status === 'VENDIDO' ? 'Reativar' : 'Marcar vendido' }}
+              {{ anuncio.status === 'ATIVO' ? 'Marcar vendido' : 'Reativar' }}
             </span>
           </ion-button>
           <ion-button

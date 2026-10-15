@@ -22,7 +22,8 @@ export type CategoriaAnimal = (typeof CATEGORIAS_ANIMAL)[number];
 export type Aptidao = (typeof APTIDOES)[number];
 export type Raca = (typeof RACAS)[number];
 export type TipoVenda = (typeof TIPOS_VENDA)[number];
-export type AnuncioStatus = 'ATIVO' | 'VENDIDO';
+/** PAUSADO: o plano PRO venceu e o anúncio passou do limite gratuito; só o dono vê e pode reativar. */
+export type AnuncioStatus = 'ATIVO' | 'PAUSADO' | 'VENDIDO';
 
 export const ROTULOS: Record<CategoriaAnimal | Aptidao | Raca | TipoVenda, string> = {
   BEZERRO: 'Bezerro',

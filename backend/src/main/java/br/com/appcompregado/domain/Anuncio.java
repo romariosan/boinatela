@@ -18,8 +18,10 @@ import jakarta.persistence.Id;
 import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
 import jakarta.persistence.OrderColumn;
+import jakarta.persistence.PrePersist;
 import jakarta.persistence.Table;
 import java.math.BigDecimal;
+import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
 import org.hibernate.annotations.BatchSize;
@@ -81,9 +83,23 @@ public class Anuncio {
     @ColumnDefault("'ATIVO'")
     private AnuncioStatus status = AnuncioStatus.ATIVO;
 
+    /**
+     * Define quais são os "mais recentes" quando o PRO vence. Nulo nos anúncios criados antes da coluna
+     * existir: esses contam como os mais antigos.
+     */
+    @Column(updatable = false)
+    private LocalDateTime dataCriacao;
+
     @ManyToOne(fetch = FetchType.LAZY, optional = false)
     @JoinColumn(name = "fk_vendedor", nullable = false)
     private Usuario vendedor;
+
+    @PrePersist
+    void aoCriar() {
+        if (dataCriacao == null) {
+            dataCriacao = LocalDateTime.now();
+        }
+    }
 
     public Long getId() {
         return id;
@@ -187,6 +203,14 @@ public class Anuncio {
 
     public void setStatus(AnuncioStatus status) {
         this.status = status;
+    }
+
+    public LocalDateTime getDataCriacao() {
+        return dataCriacao;
+    }
+
+    public void setDataCriacao(LocalDateTime dataCriacao) {
+        this.dataCriacao = dataCriacao;
     }
 
     public Usuario getVendedor() {

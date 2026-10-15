@@ -26,6 +26,7 @@ import { AnuncioService } from '../services/anuncio.service';
 import { AuthService } from '../services/auth.service';
 import { FilaPublicacaoService } from '../services/fila-publicacao.service';
 import { LocalidadesService } from '../services/localidades.service';
+import { PlanoProService, limiteDeAnunciosAtingido } from '../services/plano-pro.service';
 import { SessaoService } from '../services/sessao.service';
 import { VerificacaoService } from '../services/verificacao.service';
 import { comprimirImagem } from '../shared/comprimir-imagem';
@@ -117,6 +118,7 @@ export class PublicarPage implements OnInit, OnDestroy {
     private readonly sessao: SessaoService,
     private readonly verificacao: VerificacaoService,
     private readonly fila: FilaPublicacaoService,
+    private readonly planoPro: PlanoProService,
     private readonly localidades: LocalidadesService,
     private readonly seletorCidade: SeletorCidadeService,
     private readonly route: ActivatedRoute,
@@ -334,7 +336,10 @@ export class PublicarPage implements OnInit, OnDestroy {
       }
     } catch (erro) {
       const semSinal = (erro instanceof HttpErrorResponse && erro.status === 0) || !navigator.onLine;
-      if (semSinal && podeEsperarSinal) {
+      if (limiteDeAnunciosAtingido(erro)) {
+        // O formulário e as fotos ficam: virando PRO (ou vendendo um lote), é só tocar em publicar de novo.
+        await this.exibirPaywallPro();
+      } else if (semSinal && podeEsperarSinal) {
         await this.guardarNaFila(dados, novas, true);
       } else {
         await this.tratarErro(erro);
@@ -345,6 +350,10 @@ export class PublicarPage implements OnInit, OnDestroy {
         this.progresso = null;
       });
     }
+  }
+
+  private exibirPaywallPro(): Promise<void> {
+    return this.planoPro.exibirPaywallPro();
   }
 
   /** Sem sinal no campo: o anúncio vai para a fila do aparelho e sai sozinho quando a internet voltar. */

@@ -9,6 +9,8 @@ export const environment = {
   whatsappVerificacao: '556199999999',
   /** API rodando com WHATSAPP_ENVIO_NO_LOG=true: os botões de WhatsApp abrem o simulador em vez do wa.me. */
   whatsappSimulado: 'http://localhost:8080/dev/whatsapp' as string | null,
+  /** WhatsApp que fecha o plano Vendedor PRO (DDI + DDD + número). Substituir pelo telefone real. */
+  whatsappPlanoPro: '5561999999999',
 };
 
 /*

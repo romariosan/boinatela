@@ -121,7 +121,7 @@
         <span>{{ unidade(anuncio) }} · {{ anuncio.cidade }}</span>
       </div>
       <ion-button
-        *ngIf="anuncio.status !== 'VENDIDO'; else vendido"
+        *ngIf="anuncio.status === 'ATIVO'; else indisponivel"
         class="botao-whatsapp botao-contato"
         [disabled]="abrindoContato"
         (click)="falarComVendedor()"
@@ -130,8 +130,10 @@
         <ion-icon *ngIf="!abrindoContato" slot="start" name="logo-whatsapp"></ion-icon>
         {{ abrindoContato ? 'Abrindo...' : 'Chamar no WhatsApp' }}
       </ion-button>
-      <ng-template #vendido>
-        <ion-button class="botao-contato" color="medium" disabled>Já vendido</ion-button>
+      <ng-template #indisponivel>
+        <ion-button class="botao-contato" color="medium" disabled>
+          {{ anuncio.status === 'PAUSADO' ? 'Anúncio pausado' : 'Já vendido' }}
+        </ion-button>
       </ng-template>
     </div>
   </ion-toolbar>

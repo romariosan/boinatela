@@ -5,6 +5,7 @@ import br.com.appcompregado.domain.enums.Aptidao;
 import br.com.appcompregado.domain.enums.CategoriaAnimal;
 import br.com.appcompregado.domain.enums.Raca;
 import br.com.appcompregado.service.AnuncioService;
+import br.com.appcompregado.service.LimiteAnunciosAtingidoException;
 import br.com.appcompregado.web.dto.AnuncioRequest;
 import br.com.appcompregado.web.dto.AnuncioResponse;
 import br.com.appcompregado.web.dto.CategoriaEstoqueResponse;
@@ -15,13 +16,16 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import jakarta.validation.ConstraintViolation;
 import jakarta.validation.Valid;
 import jakarta.validation.Validator;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 import java.util.stream.Collectors;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.DeleteMapping;
+import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -116,6 +120,16 @@ public class AnuncioController {
     @PostMapping("/anuncios/{id}/contato")
     public ContatoResponse contato(@PathVariable Long id, @AuthenticationPrincipal Usuario ignorado) {
         return anuncioService.contato(id);
+    }
+
+    /** 400 e não 403: o app trata 403 como sessão inválida e desloga. */
+    @ExceptionHandler(LimiteAnunciosAtingidoException.class)
+    @ResponseStatus(HttpStatus.BAD_REQUEST)
+    public Map<String, String> limiteAtingido(LimiteAnunciosAtingidoException e) {
+        Map<String, String> corpo = new LinkedHashMap<>();
+        corpo.put("erro", "LIMITE_ANUNCIOS_ATINGIDO");
+        corpo.put("mensagem", e.getMessage());
+        return corpo;
     }
 
     private AnuncioRequest lerDados(String anuncioJson) {

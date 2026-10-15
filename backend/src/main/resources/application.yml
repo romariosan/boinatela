@@ -21,6 +21,15 @@ spring:
 server:
   port: 8080
 
+compregado:
+  limite:
+    anuncios:
+      # Anúncios ATIVOS por vendedor sem plano PRO (isPremium). Em produção: COMPREGADO_LIMITE_ANUNCIOS_GRATIS.
+      gratis: 3
+  assinatura:
+    # Expiração do plano PRO (AssinaturaJobService), horário de Brasília. "-" desliga.
+    cron: "0 1 0 * * ?"
+
 app:
   uploads:
     dir: uploads

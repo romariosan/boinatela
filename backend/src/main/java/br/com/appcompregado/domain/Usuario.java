@@ -7,6 +7,7 @@ import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import jakarta.persistence.Table;
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 import org.hibernate.annotations.ColumnDefault;
 
@@ -30,6 +31,9 @@ public class Usuario {
 
     @Column(nullable = false)
     private boolean isPremium = false;
+
+    /** Último dia do plano PRO; na madrugada seguinte o AssinaturaJobService rebaixa. Nulo = não expira. */
+    private LocalDate dataExpiracaoPremium;
 
     @Column(nullable = false)
     @ColumnDefault("false")
@@ -93,6 +97,14 @@ public class Usuario {
 
     public void setPremium(boolean premium) {
         isPremium = premium;
+    }
+
+    public LocalDate getDataExpiracaoPremium() {
+        return dataExpiracaoPremium;
+    }
+
+    public void setDataExpiracaoPremium(LocalDate dataExpiracaoPremium) {
+        this.dataExpiracaoPremium = dataExpiracaoPremium;
     }
 
     public boolean isTelefoneVerificado() {

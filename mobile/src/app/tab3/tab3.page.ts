@@ -15,6 +15,7 @@ import {
 import { AnuncioService } from '../services/anuncio.service';
 import { AuthService } from '../services/auth.service';
 import { FilaPublicacaoService, PublicacaoPendente } from '../services/fila-publicacao.service';
+import { PlanoProService, limiteDeAnunciosAtingido } from '../services/plano-pro.service';
 import { SessaoService } from '../services/sessao.service';
 import { TemaService } from '../services/tema.service';
 import { VerificacaoService } from '../services/verificacao.service';
@@ -33,6 +34,11 @@ export class Tab3Page implements OnInit {
   readonly modoSol$: Observable<boolean>;
   readonly fotoPlaceholder = FOTO_PLACEHOLDER_GADO;
   readonly esqueletos = [1, 2];
+  readonly rotuloStatus: Record<AnuncioStatus, string> = {
+    ATIVO: 'Na vitrine',
+    PAUSADO: 'Pausado - Renove o PRO',
+    VENDIDO: 'Vendido',
+  };
 
   meusAnuncios: Anuncio[] = [];
   carregandoAnuncios = false;
@@ -48,6 +54,7 @@ export class Tab3Page implements OnInit {
     readonly tema: TemaService,
     private readonly sessao: SessaoService,
     private readonly verificacao: VerificacaoService,
+    private readonly planoPro: PlanoProService,
     private readonly router: Router,
     private readonly alertCtrl: AlertController,
     private readonly toastCtrl: ToastController,
@@ -115,7 +122,7 @@ export class Tab3Page implements OnInit {
   }
 
   async alternarVendido(anuncio: Anuncio): Promise<void> {
-    const status: AnuncioStatus = anuncio.status === 'VENDIDO' ? 'ATIVO' : 'VENDIDO';
+    const status: AnuncioStatus = anuncio.status === 'ATIVO' ? 'VENDIDO' : 'ATIVO';
     this.atualizar(() => (this.ocupado = anuncio.id));
     try {
       const atualizado = await this.anunciosApi.alterarStatus(anuncio.id, status);
@@ -127,7 +134,11 @@ export class Tab3Page implements OnInit {
         'success'
       );
     } catch (erro) {
-      await this.tratarErroAcao(erro, anuncio.id);
+      if (limiteDeAnunciosAtingido(erro)) {
+        await this.planoPro.exibirPaywallPro();
+      } else {
+        await this.tratarErroAcao(erro, anuncio.id);
+      }
     } finally {
       this.atualizar(() => (this.ocupado = null));
     }

@@ -88,6 +88,37 @@ ion-button.botao-whatsapp {
   font-weight: 700;
 }
 
+/* Alerta do plano PRO: o botão de assinar é o destaque, com a cor do WhatsApp para onde ele leva. */
+ion-alert.alerta-plano-pro {
+  .alert-button-group {
+    flex-direction: column-reverse;
+    gap: 8px;
+    padding: 8px 16px 16px;
+  }
+
+  .alert-button {
+    width: 100%;
+    min-height: 48px;
+    margin: 0;
+    border-radius: 8px;
+    text-align: center;
+  }
+
+  .alert-button-group .alert-button .alert-button-inner {
+    justify-content: center;
+  }
+
+  .alert-button-role-cancel {
+    color: var(--ion-text-color);
+  }
+
+  .alert-button.botao-assinar-pro {
+    background: var(--color-whatsapp);
+    color: var(--color-whatsapp-contrast);
+    font-weight: 700;
+  }
+}
+
 /* Cancelar das ion-select (action sheet, role "cancel"): bloco próprio no rodapé, longe das opções. */
 ion-action-sheet .action-sheet-group-cancel {
   margin-top: 8px;

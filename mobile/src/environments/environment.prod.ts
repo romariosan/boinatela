@@ -4,4 +4,6 @@ export const environment = {
   /** Número do bot que recebe o código de verificação (DDI + DDD + número). */
   whatsappVerificacao: '556199999999',
   whatsappSimulado: null as string | null,
+  /** WhatsApp que fecha o plano Vendedor PRO (DDI + DDD + número). Substituir pelo telefone real. */
+  whatsappPlanoPro: '5561999999999',
 };

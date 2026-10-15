@@ -7,6 +7,7 @@ import { Anuncio, NovoAnuncio } from '../models/anuncio';
 import { AnuncioService } from './anuncio.service';
 import { AuthService } from './auth.service';
 import { ConexaoService } from './conexao.service';
+import { PlanoProService, limiteDeAnunciosAtingido } from './plano-pro.service';
 
 const BANCO = 'compregado';
 const LOJA = 'fila-publicacao';
@@ -65,6 +66,7 @@ export class FilaPublicacaoService {
     private readonly anuncios: AnuncioService,
     private readonly auth: AuthService,
     private readonly conexao: ConexaoService,
+    private readonly planoPro: PlanoProService,
     private readonly toastCtrl: ToastController,
     private readonly router: Router,
     private readonly zone: NgZone
@@ -163,6 +165,13 @@ export class FilaPublicacaoService {
       await this.avisarPublicado(criado);
       return true;
     } catch (erro) {
+      if (limiteDeAnunciosAtingido(erro)) {
+        // Fica guardado sem nova tentativa automática: o vendedor decide (virar PRO ou vender um lote).
+        item.erro = 'Limite de 3 anúncios grátis atingido. Marque um anúncio como vendido ou vire Vendedor PRO e toque em tentar de novo.';
+        await this.gravar(item);
+        void this.planoPro.exibirPaywallPro();
+        return true;
+      }
       const status = erro instanceof HttpErrorResponse ? erro.status : -1;
       if (status === 0) {
         item.envioInterrompido = true;
