@@ -14,7 +14,7 @@
   --swiper-pagination-color: var(--ion-color-success);
   --swiper-pagination-bullet-inactive-color: #ffffff;
   --swiper-pagination-bullet-inactive-opacity: 0.6;
-  --swiper-pagination-bullet-size: 9px;
+  --swiper-pagination-bullet-size: 10px;
 }
 
 .midia {
@@ -30,31 +30,231 @@
   z-index: 2;
   padding: 6px 16px;
   border-radius: 0 8px 8px 0;
-  font-size: 0.85rem;
+  font-size: 0.9rem;
 }
 
-.titulo {
-  margin: 0 0 8px;
-  font-size: 1.3rem;
-  font-weight: 700;
+.conteudo {
+  max-width: 640px;
+  margin: 0 auto;
+  padding: 16px 16px 24px;
 }
 
-.preco {
-  margin: 0 0 4px;
-  font-size: 1.6rem;
-  font-weight: 800;
-  color: var(--ion-color-success);
+.bloco-preco {
+  .preco {
+    margin: 0;
+    font-size: 1.9rem;
+    font-weight: 800;
+    line-height: 1.15;
+    color: var(--ion-color-success);
+  }
+
+  .complemento {
+    margin: 4px 0 0;
+    font-size: 1.05rem;
+    font-weight: 600;
+  }
+
+  .titulo {
+    margin: 12px 0 6px;
+    font-size: 1.25rem;
+    font-weight: 700;
+    line-height: 1.3;
+  }
+
+  .local {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    margin: 0;
+    font-size: 1.05rem;
+    color: var(--ion-color-medium);
+  }
 }
 
-.meta {
-  margin: 0 0 8px;
-  color: var(--ion-color-medium);
+/* Ficha em grade: o comprador compara lotes pelos mesmos campos, sempre no mesmo lugar. */
+.ficha {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+  margin: 20px 0;
 }
 
-.tags {
-  margin: 8px 0;
+.item-ficha {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  grid-template-rows: auto auto;
+  column-gap: 10px;
+  align-items: center;
+  padding: 12px;
+  border-radius: 12px;
+  background: var(--ion-card-background);
+
+  ion-icon {
+    grid-row: span 2;
+    font-size: 1.5rem;
+    color: var(--ion-color-success);
+  }
+
+  .rotulo {
+    font-size: 0.85rem;
+    color: var(--ion-color-medium);
+  }
+
+  .valor {
+    font-size: 1.05rem;
+    overflow-wrap: anywhere;
+  }
 }
 
 .descricao {
-  line-height: 1.5;
+  h2 {
+    margin: 0 0 6px;
+    font-size: 1.05rem;
+    font-weight: 700;
+  }
+
+  p {
+    margin: 0;
+    font-size: 1.05rem;
+    line-height: 1.55;
+    white-space: pre-line;
+  }
+}
+
+.vendedor {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-top: 20px;
+  padding: 12px;
+  border-radius: 12px;
+  background: var(--ion-card-background);
+
+  .avatar {
+    display: grid;
+    place-items: center;
+    width: 44px;
+    height: 44px;
+    border-radius: 50%;
+    font-size: 1.2rem;
+    font-weight: 800;
+    color: #fff;
+    background: var(--ion-color-secondary);
+  }
+
+  .rotulo {
+    display: block;
+    font-size: 0.85rem;
+    color: var(--ion-color-medium);
+  }
+
+  strong {
+    font-size: 1.05rem;
+  }
+}
+
+.rodape-contato ion-toolbar {
+  --background: var(--ion-card-background);
+  --padding-top: 8px;
+  --padding-bottom: 8px;
+  --padding-start: 16px;
+  --padding-end: 16px;
+}
+
+.rodape {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  max-width: 640px;
+  margin: 0 auto;
+}
+
+.rodape-preco {
+  flex: 1;
+  min-width: 0;
+
+  strong,
+  span {
+    display: block;
+    overflow: hidden;
+    white-space: nowrap;
+    text-overflow: ellipsis;
+  }
+
+  strong {
+    font-size: 1.1rem;
+    color: var(--ion-color-success);
+  }
+
+  span {
+    font-size: 0.85rem;
+    color: var(--ion-color-medium);
+  }
+}
+
+.botao-contato {
+  flex: 0 0 auto;
+  min-height: 52px;
+  margin: 0;
+  --border-radius: 12px;
+  --padding-start: 18px;
+  --padding-end: 18px;
+  font-size: 1.05rem;
+}
+
+.esqueleto {
+  ion-skeleton-text {
+    margin: 0 0 12px;
+    --border-radius: 8px;
+  }
+
+  .esqueleto-foto {
+    aspect-ratio: 4 / 3;
+    height: auto;
+    max-width: 640px;
+    margin: 0 auto;
+    --border-radius: 0;
+  }
+
+  .esqueleto-preco {
+    width: 60%;
+    height: 32px;
+  }
+
+  .esqueleto-linha {
+    width: 85%;
+    height: 20px;
+  }
+
+  .esqueleto-ficha {
+    height: 140px;
+    --border-radius: 12px;
+  }
+}
+
+.estado {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  max-width: 360px;
+  margin: 64px auto;
+  padding: 0 24px;
+  text-align: center;
+
+  > ion-icon {
+    font-size: 56px;
+    color: var(--ion-color-medium);
+  }
+
+  h2 {
+    margin: 12px 0 4px;
+    font-size: 1.2rem;
+    font-weight: 700;
+  }
+
+  p {
+    margin: 0 0 16px;
+    font-size: 1rem;
+    color: var(--ion-color-medium);
+  }
 }

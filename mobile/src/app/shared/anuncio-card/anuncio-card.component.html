@@ -1,14 +1,34 @@
-<ion-card class="card-anuncio" button (click)="abrir.emit(anuncio.id)">
-  <img
-    class="foto"
-    [src]="anuncio.fotos[0] || fotoPlaceholder"
-    [alt]="anuncio.titulo"
-    loading="lazy"
-    (error)="usarPlaceholder($event)"
-  />
+<ion-card class="card-anuncio" button (click)="abrir.emit(anuncio.id)" [attr.aria-label]="descricaoAcessivel">
+  <div class="midia">
+    <img
+      class="foto"
+      [src]="anuncio.fotos[0] || fotoPlaceholder"
+      alt=""
+      loading="lazy"
+      (error)="usarPlaceholder($event)"
+    />
+    <div class="selos">
+      <span class="selo selo-categoria">{{ rotulos[anuncio.categoriaAnimal] }}</span>
+      <span class="selo">{{ rotulos[anuncio.raca] }}</span>
+    </div>
+    <span class="selo-vendido" *ngIf="anuncio.status === 'VENDIDO'">VENDIDO</span>
+    <span class="contador-fotos" *ngIf="anuncio.fotos.length > 1">
+      <ion-icon name="images-outline" aria-hidden="true"></ion-icon>
+      {{ anuncio.fotos.length }}
+    </span>
+  </div>
+
   <ion-card-content>
-    <h2 class="titulo">{{ anuncio.titulo }}</h2>
     <p class="preco">{{ precoLabel }}</p>
-    <p class="cidade">{{ anuncio.cidade }}</p>
+    <p class="complemento" *ngIf="complemento">{{ complemento }}</p>
+    <h2 class="titulo">{{ anuncio.titulo }}</h2>
+    <p class="lote" *ngIf="lote">
+      <ion-icon name="layers-outline" aria-hidden="true"></ion-icon>
+      {{ lote }}
+    </p>
+    <p class="cidade">
+      <ion-icon name="location-outline" aria-hidden="true"></ion-icon>
+      {{ anuncio.cidade }}
+    </p>
   </ion-card-content>
 </ion-card>

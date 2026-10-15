@@ -69,6 +69,12 @@ public class Anuncio {
     @Column(nullable = false)
     private TipoVenda tipoVenda;
 
+    /** Cabeças no anúncio. Opcional: anúncios antigos não têm. */
+    private Integer quantidade;
+
+    /** Peso médio por cabeça, em kg. Opcional. */
+    private Integer pesoMedioKg;
+
     // O default no banco cobre as linhas que já existiam quando a coluna foi criada.
     @Enumerated(EnumType.STRING)
     @Column(nullable = false, length = 20)
@@ -157,6 +163,22 @@ public class Anuncio {
 
     public void setTipoVenda(TipoVenda tipoVenda) {
         this.tipoVenda = tipoVenda;
+    }
+
+    public Integer getQuantidade() {
+        return quantidade;
+    }
+
+    public void setQuantidade(Integer quantidade) {
+        this.quantidade = quantidade;
+    }
+
+    public Integer getPesoMedioKg() {
+        return pesoMedioKg;
+    }
+
+    public void setPesoMedioKg(Integer pesoMedioKg) {
+        this.pesoMedioKg = pesoMedioKg;
     }
 
     public AnuncioStatus getStatus() {

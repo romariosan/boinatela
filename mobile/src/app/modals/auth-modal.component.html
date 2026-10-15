@@ -14,26 +14,61 @@
 
 <ion-content class="ion-padding">
   <ng-container *ngIf="modo !== 'recuperar'; else recuperacao">
-    <p>Login rápido com WhatsApp. Sem e-mail.</p>
+    <p>
+      {{
+        modo === 'cadastro'
+          ? 'Só 3 dados, sem e-mail. Seu WhatsApp é por onde os compradores vão falar com você.'
+          : 'Entre com o WhatsApp e a senha da sua conta.'
+      }}
+    </p>
 
-    <ion-list>
-      <ion-item *ngIf="modo === 'cadastro'">
-        <ion-input label="Nome" labelPlacement="stacked" [(ngModel)]="nome"></ion-input>
-      </ion-item>
-      <ion-item>
-        <ion-input
-          label="WhatsApp"
-          labelPlacement="stacked"
-          type="tel"
-          inputmode="numeric"
-          [(ngModel)]="whatsapp"
-          placeholder="61999999999"
-        ></ion-input>
-      </ion-item>
-      <ion-item>
-        <ion-input label="Senha" labelPlacement="stacked" type="password" [(ngModel)]="senha"></ion-input>
-      </ion-item>
-    </ion-list>
+    <div class="campos">
+      <ion-input
+        *ngIf="modo === 'cadastro'"
+        fill="outline"
+        label="Seu nome"
+        labelPlacement="stacked"
+        autocomplete="name"
+        autocapitalize="words"
+        enterkeyhint="next"
+        [(ngModel)]="nome"
+        placeholder="Ex.: João da Silva"
+        errorText="Informe seu nome."
+        [class.ion-invalid]="tentouEnviar && !nome.trim()"
+        [class.ion-touched]="tentouEnviar && !nome.trim()"
+      ></ion-input>
+      <ion-input
+        fill="outline"
+        label="WhatsApp com DDD"
+        labelPlacement="stacked"
+        type="tel"
+        inputmode="numeric"
+        autocomplete="tel-national"
+        enterkeyhint="next"
+        [value]="whatsapp"
+        (ionInput)="aoDigitarWhatsapp($event)"
+        placeholder="(61) 99999-9999"
+        errorText="Digite o DDD e o número, ex.: (61) 99999-9999."
+        [class.ion-invalid]="tentouEnviar && whatsappIncompleto"
+        [class.ion-touched]="tentouEnviar && whatsappIncompleto"
+      ></ion-input>
+      <ion-input
+        fill="outline"
+        label="Senha"
+        labelPlacement="stacked"
+        type="password"
+        [autocomplete]="modo === 'cadastro' ? 'new-password' : 'current-password'"
+        enterkeyhint="go"
+        [(ngModel)]="senha"
+        [helperText]="modo === 'cadastro' ? 'Pelo menos ' + minimo + ' caracteres.' : ''"
+        [errorText]="modo === 'cadastro' ? 'Use pelo menos ' + minimo + ' caracteres.' : 'Digite sua senha.'"
+        [class.ion-invalid]="tentouEnviar && senhaInvalida"
+        [class.ion-touched]="tentouEnviar && senhaInvalida"
+        (keyup.enter)="enviar()"
+      >
+        <ion-input-password-toggle slot="end" showLabel="Mostrar senha" hideLabel="Esconder senha"></ion-input-password-toggle>
+      </ion-input>
+    </div>
 
     <ion-button
       *ngIf="modo === 'login'"
@@ -46,8 +81,9 @@
     </ion-button>
 
     <ion-button expand="block" class="ion-margin-top botao-whatsapp" [disabled]="carregando" (click)="enviar()">
-      <ion-icon slot="start" name="logo-whatsapp"></ion-icon>
-      {{ modo === 'cadastro' ? 'Cadastrar' : 'Entrar' }}
+      <ion-spinner *ngIf="carregando" slot="start" name="crescent"></ion-spinner>
+      <ion-icon *ngIf="!carregando" slot="start" name="logo-whatsapp"></ion-icon>
+      {{ carregando ? 'Aguarde...' : modo === 'cadastro' ? 'Criar minha conta' : 'Entrar' }}
     </ion-button>
 
     <ion-button expand="block" fill="clear" (click)="irPara(modo === 'cadastro' ? 'login' : 'cadastro')">
@@ -58,18 +94,19 @@
   <ng-template #recuperacao>
     <ng-container *ngIf="etapa === 'solicitar'; else redefinir">
       <p>Informe o WhatsApp da sua conta. Vamos mandar um código de 4 dígitos para ele.</p>
-      <ion-list>
-        <ion-item>
-          <ion-input
-            label="WhatsApp"
-            labelPlacement="stacked"
-            type="tel"
-            inputmode="numeric"
-            [(ngModel)]="whatsapp"
-            placeholder="61999999999"
-          ></ion-input>
-        </ion-item>
-      </ion-list>
+      <div class="campos">
+        <ion-input
+          fill="outline"
+          label="WhatsApp com DDD"
+          labelPlacement="stacked"
+          type="tel"
+          inputmode="numeric"
+          autocomplete="tel-national"
+          [value]="whatsapp"
+          (ionInput)="aoDigitarWhatsapp($event)"
+          placeholder="(61) 99999-9999"
+        ></ion-input>
+      </div>
       <ion-button expand="block" class="ion-margin-top botao-whatsapp" [disabled]="carregando" (click)="enviarCodigo()">
         <ion-icon slot="start" name="logo-whatsapp"></ion-icon>
         Enviar Código
@@ -78,6 +115,17 @@
 
     <ng-template #redefinir>
       <p>Digite o código que chegou no WhatsApp <strong>{{ whatsapp }}</strong> e escolha a nova senha.</p>
+      <ion-button
+        *ngIf="simuladorWhatsapp"
+        expand="block"
+        fill="outline"
+        size="small"
+        color="secondary"
+        (click)="abrirSimulador()"
+      >
+        <ion-icon slot="start" name="logo-whatsapp"></ion-icon>
+        Ambiente local: ver código no WhatsApp simulado
+      </ion-button>
       <ion-list>
         <ion-item>
           <ion-input
@@ -102,7 +150,8 @@
             type="password"
             autocomplete="new-password"
             [(ngModel)]="novaSenha"
-            errorText="Use pelo menos 4 caracteres."
+            [helperText]="'Pelo menos ' + minimo + ' caracteres.'"
+            [errorText]="'Use pelo menos ' + minimo + ' caracteres.'"
             [class.ion-invalid]="tentouRedefinir && senhaCurta"
             [class.ion-touched]="tentouRedefinir && senhaCurta"
           ></ion-input>

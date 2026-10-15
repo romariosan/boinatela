@@ -101,6 +101,7 @@ public class RecuperacaoSenhaService {
 
         registro.setUtilizado(true);
         usuario.setSenha(passwordEncoder.encode(novaSenha));
+        usuario.encerrarSessoes();
         // O código chegou por WhatsApp e foi digitado no app: isso já prova que o número é do usuário.
         usuario.setTelefoneVerificado(true);
         usuario.setCodigoVerificacao(null);

@@ -1,16 +1,58 @@
 <ion-header>
   <ion-toolbar color="primary">
     <ion-buttons slot="start">
-      <ion-back-button defaultHref="/tabs/tab1"></ion-back-button>
+      <ion-back-button defaultHref="/tabs/tab1" text="Voltar"></ion-back-button>
     </ion-buttons>
     <ion-title>Anúncio</ion-title>
+    <ion-buttons slot="end" *ngIf="anuncio">
+      <ion-button (click)="compartilhar()" aria-label="Compartilhar anúncio">
+        <ion-icon slot="icon-only" name="share-social-outline"></ion-icon>
+      </ion-button>
+    </ion-buttons>
   </ion-toolbar>
 </ion-header>
 
 <ion-content>
-  <ion-spinner *ngIf="carregando" class="ion-margin"></ion-spinner>
+  <div class="esqueleto" *ngIf="carregando && !anuncio" aria-busy="true" aria-label="Carregando anúncio">
+    <ion-skeleton-text [animated]="true" class="esqueleto-foto"></ion-skeleton-text>
+    <div class="ion-padding">
+      <ion-skeleton-text [animated]="true" class="esqueleto-preco"></ion-skeleton-text>
+      <ion-skeleton-text [animated]="true" class="esqueleto-linha"></ion-skeleton-text>
+      <ion-skeleton-text [animated]="true" class="esqueleto-ficha"></ion-skeleton-text>
+    </div>
+  </div>
 
-  <ng-container *ngIf="anuncio && !carregando">
+  <div class="estado" *ngIf="falha && !anuncio">
+    <ion-icon
+      [name]="falha === 'nao-encontrado' ? 'search-outline' : falha === 'sem-conexao' ? 'cloud-offline-outline' : 'alert-circle-outline'"
+      aria-hidden="true"
+    ></ion-icon>
+    <h2>
+      {{
+        falha === 'nao-encontrado'
+          ? 'Este anúncio saiu do ar'
+          : falha === 'sem-conexao'
+            ? 'Sem conexão com a internet'
+            : 'Não foi possível abrir o anúncio'
+      }}
+    </h2>
+    <p>
+      {{
+        falha === 'nao-encontrado'
+          ? 'O vendedor pode ter removido. Veja outros lotes na vitrine.'
+          : 'Procure um lugar com sinal melhor e tente de novo.'
+      }}
+    </p>
+    <ion-button *ngIf="falha !== 'nao-encontrado'; else voltarVitrine" (click)="carregar()">
+      <ion-icon slot="start" name="refresh-outline"></ion-icon>
+      Tentar de novo
+    </ion-button>
+    <ng-template #voltarVitrine>
+      <ion-button routerLink="/tabs/tab1" routerDirection="root">Ver a vitrine</ion-button>
+    </ng-template>
+  </div>
+
+  <ng-container *ngIf="anuncio">
     <div class="midia">
       <swiper-container *ngIf="anuncio.fotos.length > 1; else fotoUnica" #carrossel init="false" class="galeria">
         <swiper-slide *ngFor="let foto of anuncio.fotos; let i = index">
@@ -35,28 +77,62 @@
       <span class="selo-vendido" *ngIf="anuncio.status === 'VENDIDO'">VENDIDO</span>
     </div>
 
-    <div class="ion-padding">
-      <h1 class="titulo">{{ anuncio.titulo }}</h1>
-      <p class="preco">{{ precoLabel(anuncio) }}</p>
-      <p class="meta">{{ anuncio.cidade }} · {{ rotulos[anuncio.categoriaAnimal] }}</p>
+    <div class="conteudo">
+      <section class="bloco-preco">
+        <p class="preco">{{ precoLabel(anuncio) }}</p>
+        <p class="complemento" *ngIf="complemento(anuncio) as extra">{{ extra }}</p>
+        <h1 class="titulo">{{ anuncio.titulo }}</h1>
+        <p class="local">
+          <ion-icon name="location-outline" aria-hidden="true"></ion-icon>
+          {{ anuncio.cidade }}
+        </p>
+      </section>
 
-      <div class="tags">
-        <ion-chip outline="true">{{ rotulos[anuncio.raca] }}</ion-chip>
-        <ion-chip outline="true">{{ rotulos[anuncio.aptidao] }}</ion-chip>
-      </div>
+      <section class="ficha" aria-label="Dados do lote">
+        <div class="item-ficha" *ngFor="let item of ficha">
+          <ion-icon [name]="item.icone" aria-hidden="true"></ion-icon>
+          <span class="rotulo">{{ item.rotulo }}</span>
+          <strong class="valor">{{ item.valor }}</strong>
+        </div>
+      </section>
 
-      <p class="descricao">{{ anuncio.descricao }}</p>
-      <p class="meta">Vendedor: {{ anuncio.vendedorNome }}</p>
+      <section class="descricao" *ngIf="anuncio.descricao">
+        <h2>Sobre o lote</h2>
+        <p>{{ anuncio.descricao }}</p>
+      </section>
 
-      <ion-button *ngIf="anuncio.status === 'VENDIDO'; else contato" expand="block" class="ion-margin-top" color="medium" disabled>
-        Este animal já foi vendido
-      </ion-button>
-      <ng-template #contato>
-        <ion-button expand="block" class="ion-margin-top botao-whatsapp" (click)="falarComVendedor()">
-          <ion-icon slot="start" name="logo-whatsapp"></ion-icon>
-          Falar com o vendedor
-        </ion-button>
-      </ng-template>
+      <section class="vendedor">
+        <div class="avatar" aria-hidden="true">{{ anuncio.vendedorNome.charAt(0) }}</div>
+        <div>
+          <span class="rotulo">Vendedor</span>
+          <strong>{{ anuncio.vendedorNome }}</strong>
+        </div>
+      </section>
     </div>
   </ng-container>
 </ion-content>
+
+<!-- Chamada fixa: o comprador decide olhando foto e preço; não precisa rolar até o fim para falar com o vendedor. -->
+<ion-footer *ngIf="anuncio" class="rodape-contato">
+  <ion-toolbar>
+    <div class="rodape">
+      <div class="rodape-preco">
+        <strong>{{ anuncio.preco | currency: 'BRL' }}</strong>
+        <span>{{ unidade(anuncio) }} · {{ anuncio.cidade }}</span>
+      </div>
+      <ion-button
+        *ngIf="anuncio.status !== 'VENDIDO'; else vendido"
+        class="botao-whatsapp botao-contato"
+        [disabled]="abrindoContato"
+        (click)="falarComVendedor()"
+      >
+        <ion-spinner *ngIf="abrindoContato" slot="start" name="crescent"></ion-spinner>
+        <ion-icon *ngIf="!abrindoContato" slot="start" name="logo-whatsapp"></ion-icon>
+        {{ abrindoContato ? 'Abrindo...' : 'Chamar no WhatsApp' }}
+      </ion-button>
+      <ng-template #vendido>
+        <ion-button class="botao-contato" color="medium" disabled>Já vendido</ion-button>
+      </ng-template>
+    </div>
+  </ion-toolbar>
+</ion-footer>

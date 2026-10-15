@@ -1,5 +1,7 @@
 package br.com.appcompregado.service;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.springframework.test.web.client.match.MockRestRequestMatchers.header;
 import static org.springframework.test.web.client.match.MockRestRequestMatchers.jsonPath;
 import static org.springframework.test.web.client.match.MockRestRequestMatchers.method;
@@ -30,7 +32,24 @@ class WhatsappBotServiceTest {
                 .andExpect(jsonPath("$.text").value("Seu código é 1234"))
                 .andRespond(withSuccess());
 
-        new WhatsappBotService(propriedades, builder).enviar("(61) 98111-0001", "Seu código é 1234");
+        WhatsappSimulador simulador = new WhatsappSimulador();
+        new WhatsappBotService(propriedades, builder, simulador).enviar("(61) 98111-0001", "Seu código é 1234");
         evolution.verify();
+        assertTrue(simulador.listar().isEmpty());
+    }
+
+    @Test
+    void semBotGuardaNoSimuladorQuandoEnvioNoLogEstaLigado() {
+        WhatsappProperties propriedades = new WhatsappProperties();
+        propriedades.setEnvioNoLog(true);
+        WhatsappSimulador simulador = new WhatsappSimulador();
+
+        new WhatsappBotService(propriedades, RestClient.builder(), simulador)
+                .enviar("(61) 98111-0001", "Seu código é 1234");
+
+        WhatsappSimulador.Mensagem mensagem = simulador.listar().get(0);
+        assertEquals("61981110001", mensagem.numero());
+        assertEquals(WhatsappSimulador.Direcao.DO_BOT, mensagem.direcao());
+        assertEquals("Seu código é 1234", mensagem.texto());
     }
 }

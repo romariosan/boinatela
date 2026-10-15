@@ -40,7 +40,9 @@ public class JwtAuthFilter extends OncePerRequestFilter {
                 Claims claims = jwtService.parse(token);
                 String whatsapp = claims.getSubject();
                 Usuario usuario = usuarioRepository.findByWhatsapp(whatsapp).orElse(null);
-                if (usuario != null && SecurityContextHolder.getContext().getAuthentication() == null) {
+                if (usuario != null
+                        && jwtService.sessaoValida(claims, usuario)
+                        && SecurityContextHolder.getContext().getAuthentication() == null) {
                     UsernamePasswordAuthenticationToken auth =
                             new UsernamePasswordAuthenticationToken(usuario, null, List.of());
                     auth.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));

@@ -1,0 +1,26 @@
+/* Logo abaixo do cabeçalho: no rodapé cobriria o botão de WhatsApp e o de publicar. Não captura toques. */
+.sem-conexao {
+  position: fixed;
+  top: calc(var(--ion-safe-area-top, 0px) + 60px);
+  left: 50%;
+  z-index: 30000;
+  transform: translateX(-50%);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: max-content;
+  max-width: calc(100% - 24px);
+  padding: 10px 14px;
+  border-radius: 12px;
+  font-size: 0.95rem;
+  font-weight: 600;
+  color: #1f1f1f;
+  background: #ffd166;
+  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.45);
+  pointer-events: none;
+
+  ion-icon {
+    flex: 0 0 auto;
+    font-size: 1.3rem;
+  }
+}

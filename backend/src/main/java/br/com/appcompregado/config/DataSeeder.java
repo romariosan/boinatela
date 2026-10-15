@@ -47,6 +47,8 @@ public class DataSeeder {
                     Aptidao.CORTE,
                     Raca.NELORE,
                     TipoVenda.CABECA,
+                    20,
+                    180,
                     vendedor));
             anuncioRepository.save(anuncio(
                     "Vacas Girolando leiteiras",
@@ -57,6 +59,8 @@ public class DataSeeder {
                     Aptidao.LEITE,
                     Raca.GIROLANDO,
                     TipoVenda.CABECA,
+                    6,
+                    450,
                     vendedor));
             anuncioRepository.save(anuncio(
                     "Touro Angus reprodução",
@@ -67,6 +71,8 @@ public class DataSeeder {
                     Aptidao.REPRODUCAO,
                     Raca.ANGUS,
                     TipoVenda.CABECA,
+                    1,
+                    850,
                     vendedor));
         };
     }
@@ -80,6 +86,8 @@ public class DataSeeder {
             Aptidao aptidao,
             Raca raca,
             TipoVenda tipoVenda,
+            Integer quantidade,
+            Integer pesoMedioKg,
             Usuario vendedor) {
         Anuncio item = new Anuncio();
         item.setTitulo(titulo);
@@ -90,6 +98,8 @@ public class DataSeeder {
         item.setAptidao(aptidao);
         item.setRaca(raca);
         item.setTipoVenda(tipoVenda);
+        item.setQuantidade(quantidade);
+        item.setPesoMedioKg(pesoMedioKg);
         item.setVendedor(vendedor);
         return item;
     }

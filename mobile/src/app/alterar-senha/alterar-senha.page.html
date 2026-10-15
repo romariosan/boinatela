@@ -1,0 +1,68 @@
+<ion-header [translucent]="true">
+  <ion-toolbar color="primary">
+    <ion-buttons slot="start">
+      <ion-back-button defaultHref="/tabs/tab3" text="Voltar"></ion-back-button>
+    </ion-buttons>
+    <ion-title>Alterar senha</ion-title>
+  </ion-toolbar>
+</ion-header>
+
+<ion-content class="ion-padding">
+  <div class="conteudo">
+    <div class="intro">
+      <ion-icon name="lock-closed-outline" aria-hidden="true"></ion-icon>
+      <p>
+        Confirme a senha que você usa hoje e escolha a nova. Depois da troca, quem estiver logado em outro
+        aparelho precisa entrar de novo.
+      </p>
+    </div>
+
+    <form [formGroup]="form" (ngSubmit)="alterar()" class="campos" novalidate>
+      <ion-input
+        formControlName="senhaAtual"
+        fill="outline"
+        label="Senha atual"
+        labelPlacement="stacked"
+        type="password"
+        autocomplete="current-password"
+        enterkeyhint="next"
+        [errorText]="recusaSenhaAtual || 'Digite a senha que você usa hoje.'"
+        (ionInput)="aoDigitarSenhaAtual()"
+      >
+        <ion-input-password-toggle slot="end" color="medium" showLabel="Mostrar senha" hideLabel="Ocultar senha"></ion-input-password-toggle>
+      </ion-input>
+
+      <ion-input
+        formControlName="novaSenha"
+        fill="outline"
+        label="Nova senha"
+        labelPlacement="stacked"
+        type="password"
+        autocomplete="new-password"
+        enterkeyhint="next"
+        [helperText]="'Pelo menos ' + minimo + ' caracteres.'"
+        [errorText]="erroNovaSenha"
+      >
+        <ion-input-password-toggle slot="end" color="medium" showLabel="Mostrar senha" hideLabel="Ocultar senha"></ion-input-password-toggle>
+      </ion-input>
+
+      <ion-input
+        formControlName="confirmarNovaSenha"
+        fill="outline"
+        label="Confirmar nova senha"
+        labelPlacement="stacked"
+        type="password"
+        autocomplete="new-password"
+        enterkeyhint="done"
+        [errorText]="erroConfirmacao"
+      >
+        <ion-input-password-toggle slot="end" color="medium" showLabel="Mostrar senha" hideLabel="Ocultar senha"></ion-input-password-toggle>
+      </ion-input>
+
+      <ion-button type="submit" expand="block" color="success" class="botao-salvar">
+        <ion-icon slot="start" name="checkmark" aria-hidden="true"></ion-icon>
+        Salvar nova senha
+      </ion-button>
+    </form>
+  </div>
+</ion-content>

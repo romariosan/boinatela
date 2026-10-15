@@ -5,6 +5,10 @@
 </ion-header>
 
 <ion-content [fullscreen]="true">
+  <ion-refresher slot="fixed" [disabled]="!(usuario$ | async)" (ionRefresh)="atualizarPuxando($event)">
+    <ion-refresher-content pullingText="Puxe para atualizar" refreshingSpinner="crescent"></ion-refresher-content>
+  </ion-refresher>
+
   <ng-container *ngIf="usuario$ | async as usuario; else visitante">
     <section class="perfil">
       <div class="avatar" aria-hidden="true">{{ iniciais(usuario.nome) }}</div>
@@ -31,31 +35,117 @@
       </ion-button>
     </div>
 
-    <ion-list-header>
-      <ion-label>Meus anúncios</ion-label>
-      <ion-badge *ngIf="meusAnuncios.length" color="success">{{ meusAnuncios.length }}</ion-badge>
-    </ion-list-header>
+    <ng-container *ngIf="pendentes$ | async as pendentes">
+      <section class="secao" *ngIf="pendentes.length" aria-labelledby="titulo-pendentes">
+        <h2 class="titulo-secao" id="titulo-pendentes">
+          <ion-icon name="cloud-upload-outline" aria-hidden="true"></ion-icon>
+          Esperando sinal para publicar
+        </h2>
+        <p class="explicacao">
+          Ficaram guardados neste aparelho e são publicados sozinhos quando a internet voltar.
+        </p>
 
-    <div class="carregando" *ngIf="carregandoAnuncios && !meusAnuncios.length">
-      <ion-spinner></ion-spinner>
-    </div>
+        <ion-card *ngFor="let item of pendentes; trackBy: porIdPendente" class="meu-anuncio pendente">
+          <div class="resumo">
+            <span class="foto">
+              <img [src]="item.capa || fotoPlaceholder" alt="" />
+            </span>
+            <span class="info">
+              <span class="titulo">{{ item.dados.titulo }}</span>
+              <span class="preco">{{ precoLabel(item.dados) }}</span>
+              <span class="situacao" [class.erro]="item.erro" role="status">
+                <ng-container *ngIf="item.enviando; else parado">
+                  <ion-spinner name="crescent" aria-hidden="true"></ion-spinner>
+                  Enviando agora...
+                </ng-container>
+                <ng-template #parado>
+                  <ion-icon [name]="item.erro ? 'alert-circle-outline' : 'cloud-offline-outline'" aria-hidden="true"></ion-icon>
+                  {{ item.erro || 'Guardado ' + (item.criadoEm | date: "dd/MM 'às' HH:mm") }}
+                </ng-template>
+              </span>
+            </span>
+          </div>
 
-    <div class="meus-anuncios" *ngIf="meusAnuncios.length">
-      <ion-card *ngFor="let anuncio of meusAnuncios" class="meu-anuncio" [class.vendido]="anuncio.status === 'VENDIDO'">
-        <button type="button" class="resumo" (click)="verAnuncio(anuncio.id)">
+          <div class="acoes duas">
+            <ion-button fill="clear" color="success" [disabled]="item.enviando" (click)="tentarPublicarAgora(item.id)">
+              <span class="acao">
+                <ion-icon name="refresh-outline"></ion-icon>
+                Tentar agora
+              </span>
+            </ion-button>
+            <ion-button fill="clear" color="danger" [disabled]="item.enviando" (click)="confirmarDescarte(item)">
+              <span class="acao">
+                <ion-icon name="trash-outline"></ion-icon>
+                Descartar
+              </span>
+            </ion-button>
+          </div>
+        </ion-card>
+      </section>
+    </ng-container>
+
+    <section class="secao" aria-labelledby="titulo-meus">
+      <h2 class="titulo-secao" id="titulo-meus">
+        Meus anúncios
+        <ion-badge *ngIf="meusAnuncios.length" color="success">{{ meusAnuncios.length }}</ion-badge>
+      </h2>
+
+      <div *ngIf="carregandoAnuncios && !meusAnuncios.length" aria-busy="true" aria-label="Carregando seus anúncios">
+        <ion-card *ngFor="let item of esqueletos" class="meu-anuncio">
+          <div class="resumo">
+            <ion-skeleton-text [animated]="true" class="foto"></ion-skeleton-text>
+            <span class="info esqueleto">
+              <ion-skeleton-text [animated]="true" class="linha-longa"></ion-skeleton-text>
+              <ion-skeleton-text [animated]="true" class="linha-curta"></ion-skeleton-text>
+              <ion-skeleton-text [animated]="true" class="linha-media"></ion-skeleton-text>
+            </span>
+          </div>
+        </ion-card>
+      </div>
+
+      <div class="estado" *ngIf="falhaAnuncios && !carregandoAnuncios && !meusAnuncios.length">
+        <ion-icon [name]="falhaAnuncios === 'sem-conexao' ? 'cloud-offline-outline' : 'alert-circle-outline'" aria-hidden="true"></ion-icon>
+        <p>
+          {{
+            falhaAnuncios === 'sem-conexao'
+              ? 'Sem internet: não deu para trazer seus anúncios.'
+              : 'Não foi possível carregar seus anúncios agora.'
+          }}
+        </p>
+        <ion-button (click)="recarregar()">
+          <ion-icon slot="start" name="refresh-outline"></ion-icon>
+          Tentar de novo
+        </ion-button>
+      </div>
+
+      <ion-card
+        *ngFor="let anuncio of meusAnuncios; trackBy: porId"
+        class="meu-anuncio"
+        [class.vendido]="anuncio.status === 'VENDIDO'"
+      >
+        <button type="button" class="resumo" (click)="verAnuncio(anuncio.id)" [attr.aria-label]="'Abrir ' + anuncio.titulo">
           <span class="foto">
-            <img [src]="anuncio.fotos[0] || fotoPlaceholder" [alt]="anuncio.titulo" (error)="usarPlaceholder($event)" />
-            <span class="selo-vendido" *ngIf="anuncio.status === 'VENDIDO'">VENDIDO</span>
+            <img [src]="anuncio.fotos[0] || fotoPlaceholder" alt="" (error)="usarPlaceholder($event)" />
           </span>
           <span class="info">
+            <span class="status" [class.status-vendido]="anuncio.status === 'VENDIDO'">
+              {{ anuncio.status === 'VENDIDO' ? 'Vendido' : 'Na vitrine' }}
+            </span>
             <span class="titulo">{{ anuncio.titulo }}</span>
             <span class="preco">{{ precoLabel(anuncio) }}</span>
-            <span class="meta">{{ anuncio.cidade }} · {{ rotulos[anuncio.categoriaAnimal] }}</span>
+            <span class="meta" *ngIf="resumo(anuncio) as lote">
+              <ion-icon name="layers-outline" aria-hidden="true"></ion-icon>
+              {{ lote }}
+            </span>
+            <span class="meta">
+              <ion-icon name="location-outline" aria-hidden="true"></ion-icon>
+              {{ anuncio.cidade }}
+            </span>
           </span>
         </button>
 
         <div class="acoes">
-          <ion-button fill="clear" color="medium" [disabled]="ocupado === anuncio.id" (click)="editar(anuncio.id)">
+          <ion-button fill="clear" [disabled]="ocupado === anuncio.id" (click)="editar(anuncio.id)">
             <span class="acao">
               <ion-icon name="create-outline"></ion-icon>
               Editar
@@ -68,8 +158,11 @@
             (click)="alternarVendido(anuncio)"
           >
             <span class="acao">
-              <ion-icon [name]="anuncio.status === 'VENDIDO' ? 'refresh-outline' : 'pricetag-outline'"></ion-icon>
-              {{ anuncio.status === 'VENDIDO' ? 'Reativar' : 'Marcar como vendido' }}
+              <ion-spinner *ngIf="ocupado === anuncio.id; else iconeStatus" name="crescent"></ion-spinner>
+              <ng-template #iconeStatus>
+                <ion-icon [name]="anuncio.status === 'VENDIDO' ? 'refresh-outline' : 'pricetag-outline'"></ion-icon>
+              </ng-template>
+              {{ anuncio.status === 'VENDIDO' ? 'Reativar' : 'Marcar vendido' }}
             </span>
           </ion-button>
           <ion-button
@@ -85,11 +178,27 @@
           </ion-button>
         </div>
       </ion-card>
-    </div>
 
-    <p class="vazio" *ngIf="!carregandoAnuncios && !meusAnuncios.length">
-      Você ainda não publicou nenhum anúncio.
-    </p>
+      <div class="estado" *ngIf="!carregandoAnuncios && !falhaAnuncios && !meusAnuncios.length">
+        <ion-icon name="storefront-outline" aria-hidden="true"></ion-icon>
+        <p>Você ainda não publicou nenhum anúncio. Leva uns 2 minutos: fotos, preço e cidade.</p>
+      </div>
+    </section>
+
+    <section class="secao" aria-labelledby="titulo-seguranca">
+      <h2 class="titulo-secao" id="titulo-seguranca">Segurança</h2>
+      <ion-list inset="true" class="preferencias">
+        <ion-item button detail="true" lines="none" (click)="alterarSenha()">
+          <ion-icon slot="start" name="lock-closed-outline" aria-hidden="true"></ion-icon>
+          <ion-label>
+            <span class="rotulo-opcao">Alterar senha</span>
+            <span class="dica-opcao">Troque a senha que você usa para entrar.</span>
+          </ion-label>
+        </ion-item>
+      </ion-list>
+    </section>
+
+    <ng-container *ngTemplateOutlet="preferencias"></ng-container>
 
     <div class="ion-padding">
       <ion-button expand="block" fill="outline" color="danger" (click)="sair()">
@@ -111,5 +220,25 @@
       </ion-button>
       <ion-button expand="block" fill="outline" (click)="publicar()">Publicar anúncio</ion-button>
     </div>
+    <ng-container *ngTemplateOutlet="preferencias"></ng-container>
+  </ng-template>
+
+  <ng-template #preferencias>
+    <section class="secao" aria-labelledby="titulo-tela">
+      <h2 class="titulo-secao" id="titulo-tela">Tela</h2>
+      <ion-list inset="true" class="preferencias">
+        <ion-item lines="none">
+          <ion-icon slot="start" name="sunny-outline" aria-hidden="true"></ion-icon>
+          <ion-toggle
+            [checked]="(modoSol$ | async) === true"
+            (ionChange)="tema.definir($any($event).detail.checked)"
+            justify="space-between"
+          >
+            <span class="rotulo-opcao">Modo sol</span>
+            <span class="dica-opcao">Tela clara e com mais contraste para ler no sol forte.</span>
+          </ion-toggle>
+        </ion-item>
+      </ion-list>
+    </section>
   </ng-template>
 </ion-content>

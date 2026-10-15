@@ -13,6 +13,8 @@ $env:WHATSAPP_WEBHOOK_TOKEN = "um-segredo-local"
 $env:WHATSAPP_ENVIO_NO_LOG = "true"
 mvn spring-boot:run
 
+Com `WHATSAPP_ENVIO_NO_LOG=true` a API também serve o **WhatsApp simulado** em http://localhost:8080/dev/whatsapp (só para a própria máquina; não existe no perfil prod). Ele mostra o que o bot enviaria (código de recuperação, resposta da confirmação) e envia mensagens ao bot como se fosse o celular do usuário, pelo mesmo caminho do webhook da Evolution. No app em desenvolvimento, "Confirmar no meu WhatsApp" abre o simulador com o código pronto, e a tela de redefinir senha tem um botão para ver o código.
+
 3. Frontend (app na porta 8100):
 
 cd mobile

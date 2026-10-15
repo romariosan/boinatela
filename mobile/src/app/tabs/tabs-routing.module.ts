@@ -28,6 +28,10 @@ const routes: Routes = [
         loadChildren: () => import('../publicar/publicar.module').then(m => m.PublicarPageModule)
       },
       {
+        path: 'alterar-senha',
+        loadChildren: () => import('../alterar-senha/alterar-senha.module').then(m => m.AlterarSenhaPageModule)
+      },
+      {
         path: '',
         redirectTo: '/tabs/tab1',
         pathMatch: 'full'

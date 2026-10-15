@@ -20,8 +20,7 @@
   --padding-start: 6px;
   --padding-end: 6px;
   --color: var(--ion-text-color);
-  font-size: 0.8rem;
-  text-transform: none;
+  font-size: 0.9rem;
 }
 
 .filtros {
@@ -33,8 +32,8 @@
 
   ion-select {
     --border-radius: 10px;
-    min-height: 40px;
-    font-size: 0.9rem;
+    min-height: 48px;
+    font-size: 0.95rem;
   }
 }
 
@@ -44,11 +43,11 @@
   justify-content: space-between;
   gap: 4px;
   width: 100%;
-  min-height: 40px;
+  min-height: 48px;
   padding: 0 10px 0 16px;
   border: 1px solid var(--ion-color-step-300, #4d4d4d);
   border-radius: 10px;
-  font-size: 0.9rem;
+  font-size: 0.95rem;
   color: var(--ion-text-color);
   background: transparent;
 

@@ -5,6 +5,7 @@ import br.com.appcompregado.domain.enums.CategoriaAnimal;
 import br.com.appcompregado.domain.enums.Raca;
 import br.com.appcompregado.domain.enums.TipoVenda;
 import jakarta.validation.constraints.Digits;
+import jakarta.validation.constraints.Max;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Pattern;
@@ -27,5 +28,7 @@ public record AnuncioRequest(
         @NotNull Aptidao aptidao,
         @NotNull Raca raca,
         @NotNull TipoVenda tipoVenda,
+        @Positive @Max(100_000) Integer quantidade,
+        @Positive @Max(3_000) Integer pesoMedioKg,
         @Size(max = 5) List<String> fotosMantidas) {
 }

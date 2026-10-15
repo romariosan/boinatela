@@ -2,6 +2,7 @@ package br.com.appcompregado.web;
 
 import static org.hamcrest.Matchers.hasItem;
 import static org.hamcrest.Matchers.not;
+import static org.hamcrest.Matchers.nullValue;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.multipart;
@@ -129,6 +130,25 @@ class AnuncioGestaoTest {
     }
 
     @Test
+    void quantidadeEPesoSaoOpcionaisEValidados() throws Exception {
+        String comLote = dadosValidos("null").replace("\"tipoVenda\":\"CABECA\"",
+                "\"tipoVenda\":\"CABECA\",\"quantidade\":20,\"pesoMedioKg\":180");
+        mvc.perform(editar(comLote).header(HttpHeaders.AUTHORIZATION, bearer(dono)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.quantidade").value(20))
+                .andExpect(jsonPath("$.pesoMedioKg").value(180));
+
+        mvc.perform(editar(dadosValidos("null")).header(HttpHeaders.AUTHORIZATION, bearer(dono)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.quantidade").value(nullValue()));
+
+        String pesoNegativo = dadosValidos("null").replace("\"tipoVenda\":\"CABECA\"",
+                "\"tipoVenda\":\"CABECA\",\"pesoMedioKg\":-5");
+        mvc.perform(editar(pesoNegativo).header(HttpHeaders.AUTHORIZATION, bearer(dono)))
+                .andExpect(status().isBadRequest());
+    }
+
+    @Test
     void cidadeForaDoPadraoERecusada() throws Exception {
         String dados = dadosValidos("null").replace("Formosa - GO", "formosa");
         mvc.perform(editar(dados).header(HttpHeaders.AUTHORIZATION, bearer(dono)))
@@ -158,7 +178,7 @@ class AnuncioGestaoTest {
     }
 
     private String bearer(Usuario usuario) {
-        return "Bearer " + jwt.gerarToken(usuario.getId(), usuario.getWhatsapp());
+        return "Bearer " + jwt.gerarToken(usuario);
     }
 
     private Usuario usuario(String whatsapp) {

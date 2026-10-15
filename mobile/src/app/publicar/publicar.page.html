@@ -1,9 +1,9 @@
 <ion-header [translucent]="true">
   <ion-toolbar color="primary">
     <ion-buttons slot="start">
-      <ion-back-button defaultHref="/tabs/tab3"></ion-back-button>
+      <ion-back-button defaultHref="/tabs/tab3" text="Voltar"></ion-back-button>
     </ion-buttons>
-    <ion-title>{{ editando ? 'Editar anúncio' : 'Publicar anúncio' }}</ion-title>
+    <ion-title>{{ editando ? 'Editar anúncio' : 'Vender gado' }}</ion-title>
   </ion-toolbar>
 </ion-header>
 
@@ -13,166 +13,232 @@
   </div>
 
   <form *ngIf="!carregandoAnuncio" [formGroup]="form" (ngSubmit)="publicar()">
-    <section class="fotos">
+    <!-- 1. Fotos: é o que mais vende; vem primeiro e pede o mínimo para começar. -->
+    <section class="etapa">
+      <h2><span class="numero">1</span> Fotos do gado</h2>
       <input #seletorArquivo type="file" multiple accept="image/*" hidden (change)="aoSelecionarImagens($event)" />
-      <ion-button
-        expand="block"
-        fill="outline"
-        type="button"
-        class="botao-foto"
-        [disabled]="imagens.length >= maximoFotos"
-        (click)="escolherImagens()"
-      >
-        <ion-icon slot="start" name="camera-outline"></ion-icon>
-        {{ imagens.length ? 'Adicionar fotos' : 'Escolher fotos do animal' }} ({{ imagens.length }}/{{ maximoFotos }})
-      </ion-button>
 
-      <p class="dica" [class.erro]="tentouEnviar && !imagens.length">
-        {{
-          tentouEnviar && !imagens.length
-            ? 'Adicione pelo menos 1 foto do lote para publicar o anúncio.'
-            : 'Até ' + maximoFotos + ' fotos. A primeira é a capa do anúncio.'
-        }}
-      </p>
-
-      <div class="miniaturas" *ngIf="imagens.length">
+      <div class="miniaturas">
         <div class="miniatura" *ngFor="let foto of imagens; let i = index">
           <img [src]="foto.url" [alt]="'Foto ' + (i + 1)" />
           <span class="capa" *ngIf="i === 0">Capa</span>
           <button type="button" class="remover" [attr.aria-label]="'Remover foto ' + (i + 1)" (click)="removerImagem(i)">
-            <ion-icon name="close"></ion-icon>
+            <ion-icon name="close" aria-hidden="true"></ion-icon>
           </button>
         </div>
+        <button
+          type="button"
+          class="adicionar-foto"
+          *ngIf="imagens.length < maximoFotos"
+          [class.erro]="tentouEnviar && !imagens.length"
+          [disabled]="preparandoFotos"
+          (click)="escolherImagens()"
+        >
+          <ion-spinner *ngIf="preparandoFotos; else iconeCamera" name="crescent"></ion-spinner>
+          <ng-template #iconeCamera><ion-icon name="camera-outline" aria-hidden="true"></ion-icon></ng-template>
+          <span>{{ preparandoFotos ? 'Preparando...' : imagens.length ? 'Mais fotos' : 'Adicionar fotos' }}</span>
+        </button>
+      </div>
+
+      <p class="dica" [class.erro]="tentouEnviar && !imagens.length">
+        {{
+          tentouEnviar && !imagens.length
+            ? 'Adicione pelo menos 1 foto do lote para publicar.'
+            : imagens.length + ' de ' + maximoFotos + ' fotos. A primeira é a capa. Fotos de dia, de lado e com o lote inteiro vendem mais.'
+        }}
+      </p>
+    </section>
+
+    <!-- 2. O animal: opções curtas viram botões de um toque (antes: abrir lista, escolher, confirmar). -->
+    <section class="etapa">
+      <h2><span class="numero">2</span> O que você está vendendo?</h2>
+
+      <p class="rotulo-campo" id="rotulo-categoria">Categoria</p>
+      <div class="opcoes" role="radiogroup" aria-labelledby="rotulo-categoria">
+        <button
+          type="button"
+          role="radio"
+          class="opcao"
+          *ngFor="let item of categorias"
+          [class.ativa]="form.controls.categoriaAnimal.value === item"
+          [attr.aria-checked]="form.controls.categoriaAnimal.value === item"
+          (click)="escolher('categoriaAnimal', item)"
+        >
+          {{ rotulos[item] }}
+        </button>
+      </div>
+
+      <ion-list lines="full" class="lista">
+        <ion-item>
+          <ion-select
+            label="Raça"
+            labelPlacement="stacked"
+            formControlName="raca"
+            interface="action-sheet"
+            [interfaceOptions]="{ header: 'Raça' }"
+            cancelText="Cancelar"
+          >
+            <ion-select-option *ngFor="let item of racas" [value]="item">{{ rotulos[item] }}</ion-select-option>
+          </ion-select>
+        </ion-item>
+      </ion-list>
+
+      <p class="rotulo-campo" id="rotulo-aptidao">Aptidão</p>
+      <div class="opcoes" role="radiogroup" aria-labelledby="rotulo-aptidao">
+        <button
+          type="button"
+          role="radio"
+          class="opcao"
+          *ngFor="let item of aptidoes"
+          [class.ativa]="form.controls.aptidao.value === item"
+          [attr.aria-checked]="form.controls.aptidao.value === item"
+          (click)="escolher('aptidao', item)"
+        >
+          {{ rotulos[item] }}
+        </button>
+      </div>
+
+      <div class="linha-numeros">
+        <ion-input
+          fill="outline"
+          label="Quantas cabeças?"
+          labelPlacement="stacked"
+          type="number"
+          inputmode="numeric"
+          min="1"
+          formControlName="quantidade"
+          placeholder="Ex.: 20"
+          errorText="Entre 1 e 100.000."
+        ></ion-input>
+        <ion-input
+          fill="outline"
+          label="Peso médio (kg)"
+          labelPlacement="stacked"
+          type="number"
+          inputmode="numeric"
+          min="1"
+          formControlName="pesoMedioKg"
+          placeholder="Opcional"
+          errorText="Entre 1 e 3.000 kg."
+        ></ion-input>
       </div>
     </section>
 
-    <ion-list lines="full">
-      <ion-item>
-        <ion-input
-          label="Título"
-          labelPlacement="stacked"
-          formControlName="titulo"
-          placeholder="Ex.: Lote de 20 bezerros Nelore"
-          [counter]="true"
-          maxlength="120"
-          errorText="Informe um título."
-        ></ion-input>
-      </ion-item>
+    <!-- 3. Preço: o rótulo muda com o tipo de venda, e a prévia mostra a conta que o comprador vai fazer. -->
+    <section class="etapa">
+      <h2><span class="numero">3</span> Preço</h2>
 
-      <ion-item>
-        <ion-input
-          label="Preço"
-          labelPlacement="stacked"
-          type="text"
-          inputmode="numeric"
-          placeholder="R$ 0,00"
-          errorText="Informe um preço maior que zero."
-          [value]="precoTexto"
-          [class.ion-invalid]="precoInvalido"
-          [class.ion-touched]="precoInvalido"
-          (ionInput)="aoDigitarPreco($event)"
-          (ionBlur)="form.controls.preco.markAsTouched()"
-        ></ion-input>
-      </ion-item>
-
-      <ion-item>
-        <ion-select
-          label="Tipo de venda"
-          labelPlacement="stacked"
-          formControlName="tipoVenda"
-          interface="action-sheet"
-          [interfaceOptions]="{ header: 'Tipo de venda' }"
-          cancelText="Cancelar"
-          okText="Confirmar"
+      <p class="rotulo-campo" id="rotulo-venda">Como você vende?</p>
+      <div class="opcoes" role="radiogroup" aria-labelledby="rotulo-venda">
+        <button
+          type="button"
+          role="radio"
+          class="opcao"
+          *ngFor="let item of tiposVenda"
+          [class.ativa]="form.controls.tipoVenda.value === item"
+          [attr.aria-checked]="form.controls.tipoVenda.value === item"
+          (click)="escolher('tipoVenda', item)"
         >
-          <ion-select-option *ngFor="let item of tiposVenda" [value]="item">{{ rotulos[item] }}</ion-select-option>
-        </ion-select>
-      </ion-item>
+          {{ rotulos[item] }}
+        </button>
+      </div>
 
-      <ion-item>
-        <ion-select
-          label="Categoria"
-          labelPlacement="stacked"
-          formControlName="categoriaAnimal"
-          interface="action-sheet"
-          [interfaceOptions]="{ header: 'Categoria' }"
-          cancelText="Cancelar"
-          okText="Confirmar"
-        >
-          <ion-select-option *ngFor="let item of categorias" [value]="item">{{ rotulos[item] }}</ion-select-option>
-        </ion-select>
-      </ion-item>
+      <ion-input
+        class="campo-preco"
+        fill="outline"
+        [label]="rotuloPreco"
+        labelPlacement="stacked"
+        type="text"
+        inputmode="numeric"
+        placeholder="R$ 0,00"
+        errorText="Informe um preço maior que zero."
+        [helperText]="previaPreco ?? ''"
+        [value]="precoTexto"
+        [class.ion-invalid]="precoInvalido"
+        [class.ion-touched]="precoInvalido"
+        (ionInput)="aoDigitarPreco($event)"
+        (ionBlur)="form.controls.preco.markAsTouched()"
+      ></ion-input>
+    </section>
 
-      <ion-item>
-        <ion-select
-          label="Raça"
-          labelPlacement="stacked"
-          formControlName="raca"
-          interface="action-sheet"
-          [interfaceOptions]="{ header: 'Raça' }"
-          cancelText="Cancelar"
-          okText="Confirmar"
-        >
-          <ion-select-option *ngFor="let item of racas" [value]="item">{{ rotulos[item] }}</ion-select-option>
-        </ion-select>
-      </ion-item>
+    <!-- 4. Local -->
+    <section class="etapa">
+      <h2><span class="numero">4</span> Onde está o gado?</h2>
+      <ion-list lines="full" class="lista">
+        <ion-item>
+          <ion-select
+            label="Estado (UF)"
+            labelPlacement="stacked"
+            formControlName="uf"
+            interface="action-sheet"
+            [interfaceOptions]="{ header: 'Estado (UF)' }"
+            cancelText="Cancelar"
+            (ionChange)="aoMudarUf($event)"
+          >
+            <ion-select-option *ngFor="let uf of ufs" [value]="uf.sigla">{{ uf.nome }} ({{ uf.sigla }})</ion-select-option>
+          </ion-select>
+        </ion-item>
 
-      <ion-item>
-        <ion-select
-          label="Aptidão"
-          labelPlacement="stacked"
-          formControlName="aptidao"
-          interface="action-sheet"
-          [interfaceOptions]="{ header: 'Aptidão' }"
-          cancelText="Cancelar"
-          okText="Confirmar"
-        >
-          <ion-select-option *ngFor="let item of aptidoes" [value]="item">{{ rotulos[item] }}</ion-select-option>
-        </ion-select>
-      </ion-item>
-
-      <ion-item>
-        <ion-select
-          label="Estado (UF)"
-          labelPlacement="stacked"
-          formControlName="uf"
-          interface="action-sheet"
-          [interfaceOptions]="{ header: 'Estado (UF)' }"
-          cancelText="Cancelar"
-          okText="Confirmar"
-          (ionChange)="aoMudarUf($event)"
-        >
-          <ion-select-option *ngFor="let uf of ufs" [value]="uf.sigla">{{ uf.nome }} ({{ uf.sigla }})</ion-select-option>
-        </ion-select>
-      </ion-item>
-
-      <ion-item button [detail]="false" class="campo-cidade" [class.invalido]="cidadeInvalida" (click)="escolherCidade()">
-        <ion-label>
-          <p class="rotulo">Cidade</p>
-          <h3 [class.vazio]="!form.controls.cidade.value">
-            {{ form.controls.cidade.value || 'Toque para escolher a cidade' }}
-          </h3>
-        </ion-label>
-        <ion-icon slot="end" name="chevron-down-outline"></ion-icon>
-      </ion-item>
+        <ion-item button [detail]="false" class="campo-cidade" [class.invalido]="cidadeInvalida" (click)="escolherCidade()">
+          <ion-label>
+            <p class="rotulo">Cidade</p>
+            <h3 [class.vazio]="!form.controls.cidade.value">
+              {{ form.controls.cidade.value || 'Toque para escolher a cidade' }}
+            </h3>
+          </ion-label>
+          <ion-icon slot="end" name="chevron-down-outline" aria-hidden="true"></ion-icon>
+        </ion-item>
+      </ion-list>
       <p class="erro-campo" *ngIf="cidadeInvalida">Escolha a cidade.</p>
+    </section>
 
-      <ion-item>
-        <ion-textarea
-          label="Descrição (opcional)"
-          labelPlacement="stacked"
-          formControlName="descricao"
-          [autoGrow]="true"
-          [counter]="true"
-          maxlength="4000"
-          placeholder="Idade, peso médio, vacinação, condições de retirada..."
-        ></ion-textarea>
-      </ion-item>
-    </ion-list>
+    <!-- 5. Título já vem sugerido a partir dos dados acima; a descrição é opcional. -->
+    <section class="etapa">
+      <h2><span class="numero">5</span> Título e detalhes</h2>
+      <ion-input
+        fill="outline"
+        label="Título do anúncio"
+        labelPlacement="stacked"
+        formControlName="titulo"
+        [counter]="true"
+        maxlength="120"
+        helperText="Sugerido a partir dos dados acima. Pode mudar se quiser."
+        errorText="Informe um título."
+      ></ion-input>
 
-    <ion-button expand="block" type="submit" class="botao-publicar" [disabled]="enviando">
-      <ion-spinner *ngIf="enviando" slot="start" name="crescent"></ion-spinner>
-      {{ enviando ? 'Salvando...' : editando ? 'Salvar alterações' : 'Publicar' }}
-    </ion-button>
+      <ion-textarea
+        class="campo-descricao"
+        fill="outline"
+        label="Descrição (opcional)"
+        labelPlacement="stacked"
+        formControlName="descricao"
+        [autoGrow]="true"
+        [counter]="true"
+        maxlength="4000"
+        placeholder="Idade, vacinação, se é desmamado, condições de retirada..."
+      ></ion-textarea>
+    </section>
   </form>
 </ion-content>
+
+<!-- Botão principal sempre à vista: não some no fim de um formulário longo. -->
+<ion-footer *ngIf="!carregandoAnuncio" class="rodape-publicar">
+  <ion-progress-bar
+    *ngIf="enviando"
+    color="success"
+    [type]="progresso === null ? 'indeterminate' : 'determinate'"
+    [value]="(progresso ?? 0) / 100"
+  ></ion-progress-bar>
+  <ion-toolbar>
+    <ion-button
+      expand="block"
+      class="botao-publicar"
+      color="success"
+      [disabled]="enviando || preparandoFotos"
+      (click)="publicar()"
+    >
+      <ion-spinner *ngIf="enviando" slot="start" name="crescent"></ion-spinner>
+      {{ textoBotao }}
+    </ion-button>
+  </ion-toolbar>
+</ion-footer>

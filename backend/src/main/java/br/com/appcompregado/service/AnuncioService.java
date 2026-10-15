@@ -143,7 +143,9 @@ public class AnuncioService {
             throw new ResponseStatusException(HttpStatus.CONFLICT, "Este anúncio já foi vendido.");
         }
         String whatsapp = anuncio.getVendedor().getWhatsapp();
-        String mensagem = "Olá, vi seu anúncio \"" + anuncio.getTitulo() + "\" no CompreGado e tenho interesse.";
+        // Cidade no texto: quem tem vários anúncios identifica o lote sem precisar perguntar.
+        String mensagem = "Olá! Vi no CompreGado o seu anúncio \"" + anuncio.getTitulo() + "\" ("
+                + anuncio.getCidade() + ") e tenho interesse. Ainda está disponível?";
         String url = "https://wa.me/55" + whatsapp + "?text=" + encode(mensagem);
         return new ContatoResponse(whatsapp, mensagem, url);
     }
@@ -157,6 +159,8 @@ public class AnuncioService {
         anuncio.setAptidao(request.aptidao());
         anuncio.setRaca(request.raca());
         anuncio.setTipoVenda(request.tipoVenda());
+        anuncio.setQuantidade(request.quantidade());
+        anuncio.setPesoMedioKg(request.pesoMedioKg());
     }
 
     private static List<MultipartFile> arquivosEnviados(List<MultipartFile> imagens) {

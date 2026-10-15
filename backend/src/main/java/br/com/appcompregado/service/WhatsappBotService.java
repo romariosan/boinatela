@@ -19,10 +19,13 @@ public class WhatsappBotService {
 
     private final WhatsappProperties propriedades;
     private final RestClient http;
+    private final WhatsappSimulador simulador;
 
-    public WhatsappBotService(WhatsappProperties propriedades, RestClient.Builder builder) {
+    public WhatsappBotService(
+            WhatsappProperties propriedades, RestClient.Builder builder, WhatsappSimulador simulador) {
         this.propriedades = propriedades;
         this.http = builder.build();
+        this.simulador = simulador;
     }
 
     /** @param whatsapp número do cadastro (DDD + número) ou JID do WhatsApp; o DDI 55 é acrescentado. */
@@ -45,6 +48,7 @@ public class WhatsappBotService {
         }
         if (propriedades.isEnvioNoLog()) {
             log.warn("[DEV - bot desligado] Mensagem para {}: {}", numero, mensagem);
+            simulador.registrar(numero, WhatsappSimulador.Direcao.DO_BOT, mensagem);
             return;
         }
         throw new ResponseStatusException(HttpStatus.SERVICE_UNAVAILABLE, "Envio pelo WhatsApp não configurado.");

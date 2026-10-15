@@ -4,6 +4,7 @@ import { ToastController } from '@ionic/angular/lazy';
 import { Anuncio, CategoriaAnimal, CategoriaEstoque, ROTULOS } from '../models/anuncio';
 import { UFS_REGIAO, UF_PADRAO, separarCidade } from '../models/localidade';
 import { AnuncioService } from '../services/anuncio.service';
+import { AtalhoBuscaService } from '../services/atalho-busca.service';
 import { SeletorCidadeService } from '../shared/seletor-cidade/seletor-cidade.service';
 
 @Component({
@@ -31,6 +32,7 @@ export class Tab2Page {
 
   constructor(
     private readonly anunciosApi: AnuncioService,
+    private readonly atalhoBusca: AtalhoBuscaService,
     private readonly seletorCidade: SeletorCidadeService,
     private readonly router: Router,
     private readonly toastCtrl: ToastController,
@@ -39,6 +41,11 @@ export class Tab2Page {
   ) {}
 
   ionViewWillEnter(): void {
+    const categoria = this.atalhoBusca.consumirCategoria();
+    if (categoria) {
+      this.termo = '';
+      this.categoria = categoria;
+    }
     void this.carregarFiltros();
     void this.buscar();
   }

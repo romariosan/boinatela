@@ -6,6 +6,9 @@ import { AuthPayload, VerificacaoStatus } from '../models/anuncio';
 
 const STORAGE_KEY = 'compregado-auth';
 
+/** Mesmo mínimo da API (RegrasSenha). O login não usa: contas antigas têm senhas de 4 ou 5 caracteres. */
+export const MINIMO_SENHA = 6;
+
 @Injectable({ providedIn: 'root' })
 export class AuthService {
   private readonly usuario = new BehaviorSubject<AuthPayload | null>(this.lerStorage());
@@ -73,6 +76,21 @@ export class AuthService {
     );
     this.iniciarSessao(payload);
     return payload;
+  }
+
+  /**
+   * A API devolve uma sessão nova e invalida as anteriores (inclusive em outros aparelhos);
+   * guardar o token novo mantém este aparelho logado.
+   */
+  async alterarSenha(senhaAtual: string, novaSenha: string, confirmarNovaSenha: string): Promise<void> {
+    const payload = await firstValueFrom(
+      this.http.put<AuthPayload>(
+        `${environment.apiUrl}/api/usuarios/alterar-senha`,
+        { senhaAtual, novaSenha, confirmarNovaSenha },
+        { headers: new HttpHeaders({ Authorization: `Bearer ${this.token ?? ''}` }) }
+      )
+    );
+    this.iniciarSessao(payload);
   }
 
   statusVerificacao(): Promise<VerificacaoStatus> {

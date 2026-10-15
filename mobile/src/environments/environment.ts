@@ -7,6 +7,8 @@ export const environment = {
   apiUrl: 'http://localhost:8080',
   /** Número do bot que recebe o código de verificação (DDI + DDD + número). */
   whatsappVerificacao: '556199999999',
+  /** API rodando com WHATSAPP_ENVIO_NO_LOG=true: os botões de WhatsApp abrem o simulador em vez do wa.me. */
+  whatsappSimulado: 'http://localhost:8080/dev/whatsapp' as string | null,
 };
 
 /*

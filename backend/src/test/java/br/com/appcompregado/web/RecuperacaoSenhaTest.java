@@ -76,6 +76,11 @@ class RecuperacaoSenhaTest {
     }
 
     @Test
+    void novaSenhaComMenosDe6CaracteresDa400() throws Exception {
+        redefinir("61982220006", "1234", "abc12").andExpect(status().isBadRequest());
+    }
+
+    @Test
     void novoPedidoAntesDeUmMinutoDa429() throws Exception {
         cadastrar("61982220002", "antiga1");
         pedir("61982220002").andExpect(status().isOk());

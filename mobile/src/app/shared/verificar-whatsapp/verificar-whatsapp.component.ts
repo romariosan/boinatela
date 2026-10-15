@@ -45,8 +45,14 @@ export class VerificarWhatsappComponent implements OnInit, OnDestroy {
 
   confirmar(): void {
     const texto = 'Quero+confirmar+meu+cadastro+no+CompreGado.+Codigo:+' + encodeURIComponent(this.codigo);
-    const numero = this.numeroBot || environment.whatsappVerificacao;
-    window.open(`https://wa.me/${numero}?text=${texto}`, '_system');
+    const simulador = environment.whatsappSimulado;
+    if (simulador) {
+      const remetente = encodeURIComponent(this.auth.snapshot?.whatsapp ?? '');
+      window.open(`${simulador}?numero=${remetente}&texto=${texto}`, '_blank');
+    } else {
+      const numero = this.numeroBot || environment.whatsappVerificacao;
+      window.open(`https://wa.me/${numero}?text=${texto}`, '_system');
+    }
     this.abriuWhatsapp = true;
   }
 

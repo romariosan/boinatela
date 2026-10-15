@@ -42,6 +42,8 @@ public class SecurityConfig {
                         .requestMatchers(HttpMethod.GET, "/api/auth/verificar-status").authenticated()
                         .requestMatchers("/api/auth/**").permitAll()
                         .requestMatchers(HttpMethod.POST, "/api/webhook/whatsapp", "/api/webhook/evolution").permitAll()
+                        // Só existe com envio-no-log ligado e só atende a própria máquina (WhatsappSimuladorController).
+                        .requestMatchers("/dev/whatsapp", "/dev/whatsapp/**").permitAll()
                         .requestMatchers(HttpMethod.GET, "/api/anuncios/meus").authenticated()
                         .requestMatchers(HttpMethod.GET, "/api/anuncios", "/api/anuncios/*").permitAll()
                         .requestMatchers(HttpMethod.GET, "/api/categorias", "/api/cidades").permitAll()
@@ -51,6 +53,7 @@ public class SecurityConfig {
                         .requestMatchers(HttpMethod.PUT, "/api/anuncios/*").authenticated()
                         .requestMatchers(HttpMethod.DELETE, "/api/anuncios/*").authenticated()
                         .requestMatchers(HttpMethod.PATCH, "/api/anuncios/*/status").authenticated()
+                        .requestMatchers(HttpMethod.PUT, "/api/usuarios/alterar-senha").authenticated()
                         .anyRequest().authenticated())
                 .addFilterBefore(jwtAuthFilter, UsernamePasswordAuthenticationFilter.class);
         return http.build();

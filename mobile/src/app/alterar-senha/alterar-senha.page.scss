@@ -1,0 +1,49 @@
+/* Uma coluna estreita: no celular ocupa a largura toda; no tablet ou navegador não estica os campos. */
+.conteudo {
+  max-width: 480px;
+  margin: 0 auto;
+}
+
+.intro {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  margin-bottom: 20px;
+
+  ion-icon {
+    flex: 0 0 auto;
+    font-size: 28px;
+    color: var(--ion-color-success);
+  }
+
+  p {
+    margin: 0;
+    font-size: 1rem;
+    line-height: 1.45;
+    color: var(--ion-color-medium);
+  }
+}
+
+.campos {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+
+  ion-input {
+    --highlight-color-focused: var(--ion-color-success);
+    font-size: 1.05rem;
+  }
+
+  ion-input::part(helper-text),
+  ion-input::part(error-text) {
+    font-size: 0.9rem;
+  }
+}
+
+.botao-salvar {
+  min-height: 54px;
+  margin: 8px 0 0;
+  --border-radius: 12px;
+  font-size: 1.1rem;
+  font-weight: 800;
+}

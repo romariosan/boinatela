@@ -1,7 +1,8 @@
 import { HttpErrorResponse } from '@angular/common/http';
 import { ChangeDetectorRef, Component, NgZone, OnDestroy } from '@angular/core';
 import { ModalController, ToastController } from '@ionic/angular/lazy';
-import { AuthService } from '../services/auth.service';
+import { environment } from '../../environments/environment';
+import { AuthService, MINIMO_SENHA } from '../services/auth.service';
 import { VerificacaoService } from '../services/verificacao.service';
 
 type Modo = 'login' | 'cadastro' | 'recuperar';
@@ -20,6 +21,7 @@ const TITULOS: Record<Modo, string> = {
   standalone: false,
 })
 export class AuthModalComponent implements OnDestroy {
+  readonly minimo = MINIMO_SENHA;
   modo: Modo = 'login';
   etapa: EtapaRecuperacao = 'solicitar';
   nome = '';
@@ -30,6 +32,7 @@ export class AuthModalComponent implements OnDestroy {
   confirmarSenha = '';
   reenviarEm = 0;
   tentouRedefinir = false;
+  tentouEnviar = false;
   carregando = false;
 
   private contador?: ReturnType<typeof setInterval>;
@@ -52,8 +55,16 @@ export class AuthModalComponent implements OnDestroy {
     return /^\d{4}$/.test(this.codigo);
   }
 
+  get simuladorWhatsapp(): string | null {
+    return environment.whatsappSimulado;
+  }
+
   get senhaCurta(): boolean {
-    return this.novaSenha.length < 4;
+    return this.novaSenha.length < MINIMO_SENHA;
+  }
+
+  get senhaInvalida(): boolean {
+    return this.modo === 'cadastro' ? this.senha.length < MINIMO_SENHA : !this.senha;
   }
 
   get senhasDiferentes(): boolean {
@@ -71,6 +82,7 @@ export class AuthModalComponent implements OnDestroy {
 
   irPara(modo: Modo): void {
     this.modo = modo;
+    this.tentouEnviar = false;
     if (modo === 'recuperar') {
       this.etapa = 'solicitar';
       this.tentouRedefinir = false;
@@ -85,29 +97,58 @@ export class AuthModalComponent implements OnDestroy {
     this.etapa = 'solicitar';
   }
 
+  get whatsappIncompleto(): boolean {
+    return this.whatsapp.replace(/\D/g, '').length < 10;
+  }
+
+  /** Máscara "(61) 99999-9999": o número digitado fica legível e o erro de um dígito a mais ou a menos aparece. */
+  aoDigitarWhatsapp(event: Event): void {
+    const digitos = String((event as CustomEvent).detail.value ?? '').replace(/\D/g, '').slice(0, 11);
+    let texto = digitos;
+    if (digitos.length > 2) {
+      const meio = digitos.length > 10 ? 7 : 6;
+      texto = `(${digitos.slice(0, 2)}) ${digitos.slice(2, meio)}`;
+      if (digitos.length > meio) {
+        texto += `-${digitos.slice(meio)}`;
+      }
+    }
+    this.whatsapp = texto;
+    (event.target as HTMLIonInputElement).value = texto;
+  }
+
   async enviar(): Promise<void> {
+    if (this.carregando) {
+      return;
+    }
+    this.tentouEnviar = true;
+    const cadastro = this.modo === 'cadastro';
+    if ((cadastro && !this.nome.trim()) || this.whatsappIncompleto || this.senhaInvalida) {
+      return;
+    }
     this.carregando = true;
     try {
       // login() e cadastrar() já chamam auth.iniciarSessao(), que emite o estado logado para o app todo.
-      const cadastro = this.modo === 'cadastro';
       if (cadastro) {
-        await this.auth.cadastrar(this.nome, this.whatsapp, this.senha);
+        await this.auth.cadastrar(this.nome.trim(), this.whatsapp, this.senha);
       } else {
         await this.auth.login(this.whatsapp, this.senha);
       }
       await this.modalCtrl.dismiss({ ok: true });
-      await this.avisar('Bem-vindo ao CompreGado!', 'success', 'top');
+      await this.avisar(`Bem-vindo ao CompreGado, ${this.primeiroNome()}!`, 'success', 'top');
       if (cadastro) {
         void this.verificacao.exigirVerificacao();
       }
-    } catch {
-      await this.avisar(
-        this.modo === 'cadastro'
-          ? 'Não foi possível criar a conta. Confira os dados ou se o WhatsApp já está cadastrado.'
-          : 'Não foi possível entrar. Confira o WhatsApp e a senha.',
-        'danger',
-        'bottom'
-      );
+    } catch (erro) {
+      const status = erro instanceof HttpErrorResponse ? erro.status : -1;
+      if (status === 0 || !navigator.onLine) {
+        await this.avisar('Sem internet. Tente de novo quando tiver sinal.', 'warning', 'top');
+      } else if (cadastro && status === 409) {
+        await this.avisarComAcao('Este WhatsApp já tem conta.', 'Entrar', () => this.irPara('login'));
+      } else if (!cadastro && status === 401) {
+        await this.avisarComAcao('WhatsApp ou senha incorretos.', 'Esqueci a senha', () => this.irPara('recuperar'));
+      } else {
+        await this.avisar('Não foi possível concluir agora. Tente de novo.', 'danger', 'top');
+      }
     } finally {
       this.atualizar(() => (this.carregando = false));
     }
@@ -178,6 +219,11 @@ export class AuthModalComponent implements OnDestroy {
     }
   }
 
+  abrirSimulador(): void {
+    const numero = encodeURIComponent(this.whatsapp.replace(/\D/g, ''));
+    window.open(`${this.simuladorWhatsapp}?numero=${numero}`, '_blank');
+  }
+
   private iniciarContador(segundos: number): void {
     clearInterval(this.contador);
     this.reenviarEm = segundos;
@@ -202,8 +248,24 @@ export class AuthModalComponent implements OnDestroy {
     });
   }
 
+  private primeiroNome(): string {
+    return (this.auth.snapshot?.nome ?? '').trim().split(/\s+/)[0] || 'produtor';
+  }
+
   private async avisar(message: string, color: string, position: 'top' | 'bottom'): Promise<void> {
-    const toast = await this.toastCtrl.create({ message, color, position, duration: 2500 });
+    const toast = await this.toastCtrl.create({ message, color, position, duration: 3500 });
+    await toast.present();
+  }
+
+  /** Erro com saída: em vez de só dizer o que deu errado, leva ao passo que resolve. */
+  private async avisarComAcao(message: string, acao: string, aoTocar: () => void): Promise<void> {
+    const toast = await this.toastCtrl.create({
+      message,
+      color: 'warning',
+      position: 'top',
+      duration: 6000,
+      buttons: [{ text: acao, handler: () => this.atualizar(aoTocar) }],
+    });
     await toast.present();
   }
 }

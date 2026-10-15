@@ -1,3 +1,7 @@
 <ion-app>
   <ion-router-outlet></ion-router-outlet>
+  <div class="sem-conexao" *ngIf="(online$ | async) === false" role="status" aria-live="polite">
+    <ion-icon name="cloud-offline-outline" aria-hidden="true"></ion-icon>
+    Sem internet. O que você digitar fica guardado até o sinal voltar.
+  </div>
 </ion-app>

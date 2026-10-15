@@ -64,7 +64,7 @@ public class AuthService {
     }
 
     AuthResponse toResponse(Usuario usuario) {
-        String token = jwtService.gerarToken(usuario.getId(), usuario.getWhatsapp());
+        String token = jwtService.gerarToken(usuario);
         return new AuthResponse(
                 token,
                 usuario.getId(),

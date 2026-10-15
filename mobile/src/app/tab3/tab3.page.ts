@@ -2,20 +2,24 @@ import { HttpErrorResponse } from '@angular/common/http';
 import { ChangeDetectorRef, Component, DestroyRef, NgZone, OnInit } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { Router } from '@angular/router';
-import { AlertController, ToastController } from '@ionic/angular/lazy';
+import { AlertController, RefresherCustomEvent, ToastController } from '@ionic/angular/lazy';
 import { Observable } from 'rxjs';
 import {
   Anuncio,
   AnuncioStatus,
   AuthPayload,
   FOTO_PLACEHOLDER_GADO,
-  ROTULOS,
   formatarPreco,
+  resumoLote,
 } from '../models/anuncio';
 import { AnuncioService } from '../services/anuncio.service';
 import { AuthService } from '../services/auth.service';
+import { FilaPublicacaoService, PublicacaoPendente } from '../services/fila-publicacao.service';
 import { SessaoService } from '../services/sessao.service';
+import { TemaService } from '../services/tema.service';
 import { VerificacaoService } from '../services/verificacao.service';
+
+type FalhaLista = 'sem-conexao' | 'servidor';
 
 @Component({
   selector: 'app-tab3',
@@ -25,11 +29,14 @@ import { VerificacaoService } from '../services/verificacao.service';
 })
 export class Tab3Page implements OnInit {
   readonly usuario$: Observable<AuthPayload | null>;
+  readonly pendentes$: Observable<PublicacaoPendente[]>;
+  readonly modoSol$: Observable<boolean>;
   readonly fotoPlaceholder = FOTO_PLACEHOLDER_GADO;
-  readonly rotulos = ROTULOS;
+  readonly esqueletos = [1, 2];
 
   meusAnuncios: Anuncio[] = [];
   carregandoAnuncios = false;
+  falhaAnuncios: FalhaLista | null = null;
   ocupado: number | null = null;
 
   private primeiraEntrada = true;
@@ -37,6 +44,8 @@ export class Tab3Page implements OnInit {
   constructor(
     private readonly auth: AuthService,
     private readonly anunciosApi: AnuncioService,
+    private readonly fila: FilaPublicacaoService,
+    readonly tema: TemaService,
     private readonly sessao: SessaoService,
     private readonly verificacao: VerificacaoService,
     private readonly router: Router,
@@ -47,6 +56,8 @@ export class Tab3Page implements OnInit {
     private readonly destroyRef: DestroyRef
   ) {
     this.usuario$ = this.auth.currentUser$;
+    this.pendentes$ = this.fila.pendentes$;
+    this.modoSol$ = this.tema.modoSol$;
   }
 
   ngOnInit(): void {
@@ -54,7 +65,16 @@ export class Tab3Page implements OnInit {
       if (logado) {
         void this.carregarMeusAnuncios();
       } else {
-        this.atualizar(() => (this.meusAnuncios = []));
+        this.atualizar(() => {
+          this.meusAnuncios = [];
+          this.falhaAnuncios = null;
+        });
+      }
+    });
+    // Anúncio da fila que saiu quando o sinal voltou: entra na lista sem o vendedor precisar atualizar.
+    this.fila.publicados$.pipe(takeUntilDestroyed(this.destroyRef)).subscribe(() => {
+      if (this.auth.logado) {
+        void this.carregarMeusAnuncios();
       }
     });
   }
@@ -84,6 +104,10 @@ export class Tab3Page implements OnInit {
 
   verAnuncio(id: number): void {
     void this.router.navigate(['/tabs/tab3/anuncio', id]);
+  }
+
+  alterarSenha(): void {
+    void this.router.navigate(['/tabs/alterar-senha']);
   }
 
   editar(id: number): void {
@@ -141,8 +165,53 @@ export class Tab3Page implements OnInit {
     await this.avisar('Você saiu da conta.', 'medium');
   }
 
-  precoLabel(anuncio: Anuncio): string {
+  recarregar(): void {
+    void this.carregarMeusAnuncios();
+  }
+
+  async atualizarPuxando(event: Event): Promise<void> {
+    await Promise.all([this.carregarMeusAnuncios(), this.fila.processar()]);
+    await (event as RefresherCustomEvent).target.complete();
+  }
+
+  async tentarPublicarAgora(id: string): Promise<void> {
+    if (!navigator.onLine) {
+      await this.avisar('Ainda sem internet. Ele sai sozinho quando o sinal voltar.', 'warning');
+      return;
+    }
+    await this.fila.tentarDeNovo(id);
+  }
+
+  async confirmarDescarte(item: PublicacaoPendente): Promise<void> {
+    const alerta = await this.alertCtrl.create({
+      header: 'Descartar anúncio',
+      message: `"${item.dados.titulo}" ainda não foi publicado. Descartar apaga ele e as fotos deste aparelho.`,
+      buttons: [
+        { text: 'Manter', role: 'cancel' },
+        { text: 'Descartar', role: 'destructive' },
+      ],
+    });
+    await alerta.present();
+    const { role } = await alerta.onDidDismiss();
+    if (role === 'destructive') {
+      await this.fila.descartar(item.id);
+    }
+  }
+
+  precoLabel(anuncio: Pick<Anuncio, 'preco' | 'tipoVenda'>): string {
     return formatarPreco(anuncio);
+  }
+
+  resumo(anuncio: Anuncio): string | null {
+    return resumoLote(anuncio);
+  }
+
+  porId(_indice: number, anuncio: Anuncio): number {
+    return anuncio.id;
+  }
+
+  porIdPendente(_indice: number, item: PublicacaoPendente): string {
+    return item.id;
   }
 
   iniciais(nome: string): string {
@@ -169,8 +238,12 @@ export class Tab3Page implements OnInit {
     }
   }
 
+  /** Com a lista já na tela, uma falha ao atualizar só avisa: os anúncios mostrados continuam valendo. */
   private async carregarMeusAnuncios(): Promise<void> {
-    this.atualizar(() => (this.carregandoAnuncios = true));
+    this.atualizar(() => {
+      this.carregandoAnuncios = true;
+      this.falhaAnuncios = null;
+    });
     try {
       const anuncios = await this.anunciosApi.meus();
       this.atualizar(() => {
@@ -178,13 +251,20 @@ export class Tab3Page implements OnInit {
         this.carregandoAnuncios = false;
       });
     } catch (erro) {
-      this.atualizar(() => (this.carregandoAnuncios = false));
       const status = erro instanceof HttpErrorResponse ? erro.status : 0;
+      const semConexao = status === 0 || !navigator.onLine;
+      this.atualizar(() => {
+        this.carregandoAnuncios = false;
+        this.falhaAnuncios = semConexao ? 'sem-conexao' : 'servidor';
+      });
       if (status === 401 || status === 403) {
         this.auth.sair();
         await this.avisar('Sua sessão expirou. Entre de novo.', 'warning');
-      } else {
-        await this.avisar('Não foi possível carregar seus anúncios.', 'warning');
+      } else if (this.meusAnuncios.length) {
+        await this.avisar(
+          semConexao ? 'Sem internet: a lista pode estar desatualizada.' : 'Não foi possível atualizar seus anúncios.',
+          'warning'
+        );
       }
     }
   }
@@ -210,7 +290,13 @@ export class Tab3Page implements OnInit {
   }
 
   private async avisar(message: string, color: string): Promise<void> {
-    const toast = await this.toastCtrl.create({ message, color, duration: 2500 });
+    const toast = await this.toastCtrl.create({
+      message,
+      color,
+      position: 'top',
+      duration: color === 'success' ? 2600 : 4000,
+      buttons: color === 'success' ? [] : [{ text: 'OK', role: 'cancel' }],
+    });
     await toast.present();
   }
 }

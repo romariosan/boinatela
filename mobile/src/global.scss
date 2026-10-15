@@ -37,6 +37,44 @@
 /* @import "@ionic/angular/css/palettes/dark.class.css"; */
 /* @import "@ionic/angular/css/palettes/dark.system.css"; */
 
+/* Uso no campo (sol na tela, uma mão ocupada, às vezes de luva): alvo de toque de 48px no mínimo e
+   rótulos em caixa normal, que se leem mais rápido que MAIÚSCULAS. */
+ion-button {
+  min-height: 48px;
+  font-size: 1rem;
+  text-transform: none;
+  letter-spacing: 0;
+}
+
+ion-back-button {
+  text-transform: none;
+  font-size: 1rem;
+}
+
+ion-button[size="small"] {
+  min-height: 40px;
+  font-size: 0.9rem;
+}
+
+ion-tab-bar {
+  height: 64px;
+}
+
+ion-tab-button {
+  --padding-top: 6px;
+  --padding-bottom: 6px;
+  font-size: 0.8rem;
+
+  ion-icon {
+    font-size: 26px;
+  }
+}
+
+ion-toast {
+  --min-height: 56px;
+  font-size: 1rem;
+}
+
 /* Verde oficial do WhatsApp: só para botões de conversa e login. */
 ion-button.botao-whatsapp {
   --background: var(--color-whatsapp);
@@ -81,6 +119,11 @@ ion-action-sheet .action-sheet-selected {
   background: var(--ion-color-danger);
 }
 
+/* Modo sol: card branco sobre fundo creme precisa de borda; a sombra forte do tema escuro vira mancha. */
+.modo-sol ion-card {
+  border: 1px solid #d0cabd;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.12);
+}
 /* Verde Agro sobre #121212 não tem contraste para texto; botões vazados sem cor própria usam o texto neutro. */
 ion-content ion-button:is([fill="outline"], [fill="clear"]):not([color]) {
   --color: var(--ion-text-color);

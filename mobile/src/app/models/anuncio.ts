@@ -68,10 +68,60 @@ export function lerMoeda(texto: string): number | null {
   return digitos ? Number(digitos) / 100 : null;
 }
 
+export function unidadePreco(tipoVenda: TipoVenda): string {
+  return tipoVenda === 'KG' ? '/kg' : tipoVenda === 'LOTE' ? '/lote' : '/cabeça';
+}
+
 export function formatarPreco(anuncio: Pick<Anuncio, 'preco' | 'tipoVenda'>): string {
-  const valor = formatarMoeda(anuncio.preco);
-  const tipo = anuncio.tipoVenda === 'KG' ? '/kg' : anuncio.tipoVenda === 'LOTE' ? '/lote' : '/cabeça';
-  return `${valor} ${tipo}`;
+  return `${formatarMoeda(anuncio.preco)} ${unidadePreco(anuncio.tipoVenda)}`;
+}
+
+export const ROTULO_PRECO: Record<TipoVenda, string> = {
+  CABECA: 'Preço por cabeça',
+  KG: 'Preço por kg',
+  LOTE: 'Preço do lote inteiro',
+};
+
+const MOEDA_INTEIRA = new Intl.NumberFormat('pt-BR', {
+  style: 'currency',
+  currency: 'BRL',
+  maximumFractionDigits: 0,
+});
+
+/**
+ * A conta que o comprador faria de cabeça: total do lote (preço por cabeça), valor por cabeça (lote fechado)
+ * ou valor estimado do animal (preço por kg com peso médio). Nulo quando faltam dados para a conta.
+ */
+export function precoComplementar(
+  anuncio: Pick<Anuncio, 'preco' | 'tipoVenda' | 'quantidade' | 'pesoMedioKg'>
+): string | null {
+  const quantidade = anuncio.quantidade ?? 0;
+  const peso = anuncio.pesoMedioKg ?? 0;
+  if (!anuncio.preco) {
+    return null;
+  }
+  if (anuncio.tipoVenda === 'CABECA' && quantidade > 1) {
+    return `Lote: ${MOEDA_INTEIRA.format(anuncio.preco * quantidade)}`;
+  }
+  if (anuncio.tipoVenda === 'LOTE' && quantidade > 1) {
+    return `≈ ${MOEDA_INTEIRA.format(anuncio.preco / quantidade)} por cabeça`;
+  }
+  if (anuncio.tipoVenda === 'KG' && peso > 0) {
+    return `≈ ${MOEDA_INTEIRA.format(anuncio.preco * peso)} por cabeça`;
+  }
+  return null;
+}
+
+/** Ex.: "20 cabeças · ~180 kg". Nulo se o anúncio não tem nenhum dos dois. */
+export function resumoLote(anuncio: Pick<Anuncio, 'quantidade' | 'pesoMedioKg'>): string | null {
+  const partes: string[] = [];
+  if (anuncio.quantidade) {
+    partes.push(anuncio.quantidade === 1 ? '1 cabeça' : `${anuncio.quantidade} cabeças`);
+  }
+  if (anuncio.pesoMedioKg) {
+    partes.push(`~${anuncio.pesoMedioKg} kg`);
+  }
+  return partes.length ? partes.join(' · ') : null;
 }
 
 export interface Anuncio {
@@ -86,6 +136,10 @@ export interface Anuncio {
   aptidao: Aptidao;
   raca: Raca;
   tipoVenda: TipoVenda;
+  /** Cabeças no anúncio; anúncios antigos não têm. */
+  quantidade?: number | null;
+  /** Peso médio por cabeça, em kg. */
+  pesoMedioKg?: number | null;
   status: AnuncioStatus;
   vendedorId: number;
   vendedorNome: string;
@@ -101,6 +155,8 @@ export interface NovoAnuncio {
   aptidao: Aptidao;
   raca: Raca;
   tipoVenda: TipoVenda;
+  quantidade: number | null;
+  pesoMedioKg: number | null;
   /** Só na edição: fotos atuais que continuam, na ordem; as novas entram depois. */
   fotosMantidas?: string[];
 }

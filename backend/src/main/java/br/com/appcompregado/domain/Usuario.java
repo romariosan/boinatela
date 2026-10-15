@@ -7,6 +7,7 @@ import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import jakarta.persistence.Table;
+import java.time.LocalDateTime;
 import org.hibernate.annotations.ColumnDefault;
 
 @Entity
@@ -38,6 +39,21 @@ public class Usuario {
     @JsonIgnore
     @Column(length = 16)
     private String codigoVerificacao;
+
+    /** Vai no JWT (claim "ver"); trocar a senha incrementa e derruba os tokens emitidos antes. */
+    @JsonIgnore
+    @Column(nullable = false)
+    @ColumnDefault("0")
+    private int versaoSessao = 0;
+
+    /** Erros seguidos da senha atual ao trocar a senha; zera ao acertar ou ao bloquear. */
+    @JsonIgnore
+    @Column(nullable = false)
+    @ColumnDefault("0")
+    private int tentativasSenhaAtual = 0;
+
+    @JsonIgnore
+    private LocalDateTime trocaSenhaBloqueadaAte;
 
     public Long getId() {
         return id;
@@ -93,5 +109,30 @@ public class Usuario {
 
     public void setCodigoVerificacao(String codigoVerificacao) {
         this.codigoVerificacao = codigoVerificacao;
+    }
+
+    public int getVersaoSessao() {
+        return versaoSessao;
+    }
+
+    /** Senha nova: as sessões abertas em outros aparelhos precisam entrar de novo. */
+    public void encerrarSessoes() {
+        versaoSessao++;
+    }
+
+    public int getTentativasSenhaAtual() {
+        return tentativasSenhaAtual;
+    }
+
+    public void setTentativasSenhaAtual(int tentativasSenhaAtual) {
+        this.tentativasSenhaAtual = tentativasSenhaAtual;
+    }
+
+    public LocalDateTime getTrocaSenhaBloqueadaAte() {
+        return trocaSenhaBloqueadaAte;
+    }
+
+    public void setTrocaSenhaBloqueadaAte(LocalDateTime trocaSenhaBloqueadaAte) {
+        this.trocaSenhaBloqueadaAte = trocaSenhaBloqueadaAte;
     }
 }

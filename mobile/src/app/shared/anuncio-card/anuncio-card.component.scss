@@ -11,22 +11,97 @@
   box-shadow: 0 4px 16px rgba(0, 0, 0, 0.4);
 }
 
+:host-context(.modo-sol) .card-anuncio {
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.12);
+}
+
+.midia {
+  position: relative;
+}
+
 .foto {
   display: block;
   width: 100%;
-  height: 200px;
+  aspect-ratio: 4 / 3;
   object-fit: cover;
   background: var(--ion-color-step-100, var(--ion-background-color-step-100));
 }
 
+/* Selos sólidos sobre a foto: legíveis em qualquer imagem, sem depender do contraste dela. */
+.selos {
+  position: absolute;
+  left: 10px;
+  bottom: 10px;
+  right: 10px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.selo {
+  padding: 4px 10px;
+  border-radius: 999px;
+  font-size: 0.85rem;
+  font-weight: 700;
+  color: #1f1f1f;
+  background: #f7f3ea;
+}
+
+.selo-categoria {
+  color: #fff;
+  background: var(--ion-color-primary);
+}
+
+.selo-vendido {
+  position: absolute;
+  top: 12px;
+  left: 0;
+  padding: 6px 14px;
+  border-radius: 0 8px 8px 0;
+  font-size: 0.85rem;
+}
+
+.contador-fotos {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 3px 8px;
+  border-radius: 8px;
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: #fff;
+  background: rgba(0, 0, 0, 0.65);
+}
+
 ion-card-content {
-  padding: 16px 18px 18px;
+  padding: 14px 16px 16px;
+}
+
+.preco {
+  margin: 0;
+  font-size: 1.45rem;
+  font-weight: 800;
+  line-height: 1.2;
+  color: var(--ion-color-success);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.complemento {
+  margin: 2px 0 0;
+  font-size: 0.95rem;
+  font-weight: 600;
+  color: var(--ion-text-color);
 }
 
 .titulo {
-  margin: 0 0 8px;
-  font-size: 1rem;
-  font-weight: 700;
+  margin: 8px 0 6px;
+  font-size: 1.05rem;
+  font-weight: 600;
   line-height: 1.3;
   color: var(--ion-text-color);
   display: -webkit-box;
@@ -37,20 +112,22 @@ ion-card-content {
   overflow-wrap: anywhere;
 }
 
-.preco {
-  margin: 0 0 4px;
-  font-size: 1.25rem;
-  font-weight: 800;
-  color: var(--ion-color-success);
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
+.lote,
+.cidade {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin: 4px 0 0;
+  font-size: 0.95rem;
+  color: var(--ion-color-medium);
+
+  ion-icon {
+    flex: 0 0 auto;
+    font-size: 1.05rem;
+  }
 }
 
 .cidade {
-  margin: 0;
-  font-size: 0.85rem;
-  color: var(--ion-color-medium);
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;

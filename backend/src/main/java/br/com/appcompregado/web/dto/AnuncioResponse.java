@@ -20,6 +20,8 @@ public record AnuncioResponse(
         Aptidao aptidao,
         Raca raca,
         TipoVenda tipoVenda,
+        Integer quantidade,
+        Integer pesoMedioKg,
         AnuncioStatus status,
         Long vendedorId,
         String vendedorNome) {
@@ -36,6 +38,8 @@ public record AnuncioResponse(
                 anuncio.getAptidao(),
                 anuncio.getRaca(),
                 anuncio.getTipoVenda(),
+                anuncio.getQuantidade(),
+                anuncio.getPesoMedioKg(),
                 anuncio.getStatus(),
                 anuncio.getVendedor().getId(),
                 anuncio.getVendedor().getNome());

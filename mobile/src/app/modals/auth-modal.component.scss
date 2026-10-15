@@ -7,6 +7,13 @@ p {
   }
 }
 
+.campos {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  margin-top: 16px;
+}
+
 .esqueceu {
   display: block;
   margin: 4px 0 0 auto;

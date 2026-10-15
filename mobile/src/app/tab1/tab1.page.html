@@ -6,7 +6,18 @@
         <span class="marca-nome">CompreGado</span>
       </div>
     </ion-title>
+    <ion-buttons slot="end">
+      <ion-button
+        class="botao-tema"
+        (click)="tema.alternar()"
+        [attr.aria-pressed]="modoSol$ | async"
+        aria-label="Modo sol: tela clara para ler no sol forte"
+      >
+        <ion-icon slot="icon-only" [name]="(modoSol$ | async) ? 'moon-outline' : 'sunny-outline'"></ion-icon>
+      </ion-button>
+    </ion-buttons>
   </ion-toolbar>
+  <ion-progress-bar *ngIf="carregando && anuncios.length" type="indeterminate" color="success"></ion-progress-bar>
 </ion-header>
 
 <ion-content [fullscreen]="true">
@@ -17,18 +28,40 @@
   </ion-header>
 
   <ion-refresher slot="fixed" (ionRefresh)="atualizarPuxando($event)">
-    <ion-refresher-content></ion-refresher-content>
+    <ion-refresher-content pullingText="Puxe para atualizar" refreshingSpinner="crescent"></ion-refresher-content>
   </ion-refresher>
 
-  <div class="chips" *ngIf="categorias.length">
-    <ion-chip *ngFor="let item of categorias" color="success" outline="true">
-      {{ rotulos[item.categoria] }} · {{ item.count }}
-    </ion-chip>
+  <!-- Vitrine salva no aparelho: o usuário sabe que pode estar desatualizada e tem como tentar de novo. -->
+  <div class="aviso-offline" *ngIf="falha && anuncios.length" role="status">
+    <ion-icon name="cloud-offline-outline" aria-hidden="true"></ion-icon>
+    <span>
+      {{ falha === 'sem-conexao' ? 'Sem internet.' : 'Não conseguimos atualizar.' }}
+      <ng-container *ngIf="salvaEm">Mostrando anúncios salvos às {{ salvaEm | date: 'HH:mm' }}.</ng-container>
+    </span>
+    <ion-button size="small" fill="outline" color="light" (click)="carregar()">Tentar de novo</ion-button>
   </div>
 
-  <ion-spinner *ngIf="carregando" class="ion-margin"></ion-spinner>
+  <nav class="atalhos" *ngIf="categorias.length" aria-label="Ver por categoria">
+    <button type="button" class="atalho" *ngFor="let item of categorias" (click)="filtrarCategoria(item.categoria)">
+      {{ rotulos[item.categoria] }}
+      <span class="quantidade">{{ item.count }}</span>
+    </button>
+  </nav>
 
-  <ion-grid class="grade" fixed *ngIf="!carregando">
+  <ion-grid class="grade" fixed *ngIf="carregando && !anuncios.length" aria-busy="true" aria-label="Carregando anúncios">
+    <ion-row>
+      <ion-col *ngFor="let item of esqueletos" size="12" size-md="6">
+        <div class="esqueleto">
+          <ion-skeleton-text [animated]="true" class="esqueleto-foto"></ion-skeleton-text>
+          <ion-skeleton-text [animated]="true" class="esqueleto-preco"></ion-skeleton-text>
+          <ion-skeleton-text [animated]="true" class="esqueleto-linha"></ion-skeleton-text>
+          <ion-skeleton-text [animated]="true" class="esqueleto-linha curta"></ion-skeleton-text>
+        </div>
+      </ion-col>
+    </ion-row>
+  </ion-grid>
+
+  <ion-grid class="grade" fixed *ngIf="anuncios.length">
     <ion-row>
       <ion-col *ngFor="let anuncio of anuncios; trackBy: porId" size="12" size-md="6">
         <app-anuncio-card [anuncio]="anuncio" (abrir)="verDetalhes($event)"></app-anuncio-card>
@@ -36,7 +69,37 @@
     </ion-row>
   </ion-grid>
 
-  <p class="vazio" *ngIf="!carregando && anuncios.length === 0">
-    Nenhum anúncio no momento. Puxe para atualizar.
-  </p>
+  <div class="estado" *ngIf="!carregando && !anuncios.length">
+    <ng-container *ngIf="falha; else vazio">
+      <ion-icon [name]="falha === 'sem-conexao' ? 'cloud-offline-outline' : 'alert-circle-outline'" aria-hidden="true"></ion-icon>
+      <h2>{{ falha === 'sem-conexao' ? 'Sem conexão com a internet' : 'Não foi possível carregar a vitrine' }}</h2>
+      <p>
+        {{
+          falha === 'sem-conexao'
+            ? 'Procure um lugar com sinal melhor e tente de novo.'
+            : 'O problema é do nosso lado. Tente de novo em alguns instantes.'
+        }}
+      </p>
+      <ion-button (click)="carregar()">
+        <ion-icon slot="start" name="refresh-outline"></ion-icon>
+        Tentar de novo
+      </ion-button>
+    </ng-container>
+    <ng-template #vazio>
+      <ion-icon name="storefront-outline" aria-hidden="true"></ion-icon>
+      <h2>Nenhum anúncio por enquanto</h2>
+      <p>Seja o primeiro a anunciar seu gado na região.</p>
+      <ion-button (click)="venderGado()">
+        <ion-icon slot="start" name="add-circle-outline"></ion-icon>
+        Anunciar meu gado
+      </ion-button>
+    </ng-template>
+  </div>
+
+  <ion-fab slot="fixed" vertical="bottom" horizontal="end">
+    <ion-button class="vender" shape="round" (click)="venderGado()">
+      <ion-icon slot="start" name="add" aria-hidden="true"></ion-icon>
+      Vender gado
+    </ion-button>
+  </ion-fab>
 </ion-content>

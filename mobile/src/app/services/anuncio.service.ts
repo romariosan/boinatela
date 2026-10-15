@@ -1,6 +1,13 @@
-import { HttpClient, HttpHeaders, HttpParams } from '@angular/common/http';
+import {
+  HttpClient,
+  HttpEventType,
+  HttpHeaders,
+  HttpParams,
+  HttpRequest,
+  HttpResponse,
+} from '@angular/common/http';
 import { Injectable } from '@angular/core';
-import { firstValueFrom } from 'rxjs';
+import { filter, firstValueFrom, lastValueFrom, map, tap } from 'rxjs';
 import { environment } from '../../environments/environment';
 import {
   Anuncio,
@@ -68,19 +75,45 @@ export class AnuncioService {
     return firstValueFrom(this.http.get<string[]>(`${environment.apiUrl}/api/cidades`));
   }
 
-  criar(dados: NovoAnuncio, imagens: File[]): Promise<Anuncio> {
-    return firstValueFrom(
-      this.http.post<Anuncio>(`${environment.apiUrl}/api/anuncios`, this.multipart(dados, imagens), {
-        headers: this.authHeaders(),
-      })
+  /** @param aoProgredir percentual (0–100) do envio; as fotos dominam o tempo em conexão lenta. */
+  criar(dados: NovoAnuncio, imagens: File[], aoProgredir?: (percentual: number) => void): Promise<Anuncio> {
+    return this.enviar('POST', `${environment.apiUrl}/api/anuncios`, this.multipart(dados, imagens), aoProgredir);
+  }
+
+  atualizar(
+    id: number,
+    dados: NovoAnuncio,
+    novasImagens: File[],
+    aoProgredir?: (percentual: number) => void
+  ): Promise<Anuncio> {
+    return this.enviar(
+      'PUT',
+      `${environment.apiUrl}/api/anuncios/${id}`,
+      this.multipart(dados, novasImagens),
+      aoProgredir
     );
   }
 
-  atualizar(id: number, dados: NovoAnuncio, novasImagens: File[]): Promise<Anuncio> {
-    return firstValueFrom(
-      this.http.put<Anuncio>(`${environment.apiUrl}/api/anuncios/${id}`, this.multipart(dados, novasImagens), {
-        headers: this.authHeaders(),
-      })
+  private enviar(
+    metodo: 'POST' | 'PUT',
+    url: string,
+    corpo: FormData,
+    aoProgredir?: (percentual: number) => void
+  ): Promise<Anuncio> {
+    const requisicao = new HttpRequest<FormData>(metodo, url, corpo, {
+      headers: this.authHeaders(),
+      reportProgress: true,
+    });
+    return lastValueFrom(
+      this.http.request<Anuncio>(requisicao).pipe(
+        tap(evento => {
+          if (evento.type === HttpEventType.UploadProgress && evento.total) {
+            aoProgredir?.(Math.round((100 * evento.loaded) / evento.total));
+          }
+        }),
+        filter((evento): evento is HttpResponse<Anuncio> => evento.type === HttpEventType.Response),
+        map(resposta => resposta.body as Anuncio)
+      )
     );
   }
 
