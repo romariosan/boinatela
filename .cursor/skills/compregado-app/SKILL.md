@@ -37,7 +37,7 @@ Para garantir foco e validação rápida, o MVP será exclusivo para Gado (Corte
 O banco de dados deve ser dinâmico (com todas as categorias da agronomia cadastradas), mas o App renderiza apenas o que tem estoque (count > 0).
 
 Estratégia de Lazy Login: O usuário acessa a vitrine de produtos e faz buscas livremente sem precisar de senha (Zero atrito inicial).
-Apenas duas ações exigem Login/Token: Clicar no botão para "Falar com o Vendedor" no WhatsApp ou tentar "Publicar Anúncio" (através de um Modal Bottom Sheet).
+Apenas publicar anúncio e reivindicar um lote exigem autenticação (OTP no WhatsApp). "Falar com o Vendedor" pede só o número, sem senha, grava o lead e abre o WhatsApp do vendedor.
 Autenticação: O login e cadastro (Silencioso e Rápido) é feito usando o Número do WhatsApp + Senha (Sem e-mail longo). Sessão no localStorage, chave `compregado-auth`.
 
 ## Entidades Principais no Backend (JPA - Foco em Gado)

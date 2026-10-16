@@ -3,6 +3,7 @@ package br.com.appcompregado.service;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import br.com.appcompregado.domain.Anuncio;
+import br.com.appcompregado.repository.AnuncioBusca;
 import br.com.appcompregado.web.dto.AnuncioResponse;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import java.math.BigDecimal;
@@ -71,10 +72,31 @@ class GrupoQualidadeTest {
 
     @Test
     void conviteDoConsultorPedeFoto() {
-        String texto = WhatsAppConsultantService.conviteFoto("produtor", "https://appcompregado.com.br/lote/4");
+        String texto = WhatsAppConsultantService.conviteFoto("produtor");
 
         assertThat(texto).contains("Opa produtor!");
         assertThat(texto).contains("sem foto");
-        assertThat(texto).contains("https://appcompregado.com.br/lote/4");
+        assertThat(texto).doesNotContain("http");
+        assertThat(texto).doesNotContain("consultor");
+    }
+
+    @Test
+    void apresentacaoCitaOLoteENaoCobraComissao() {
+        String texto = WhatsAppConsultantService.montarApresentacao(
+                "Romario", 12, "NELORE", "https://appcompregado.com.br/lote/3");
+
+        assertThat(texto).contains("Romario");
+        assertThat(texto).contains("dos 12 Nelore");
+        assertThat(texto).contains("não cobra comissão");
+        assertThat(texto).contains("https://appcompregado.com.br/lote/3");
+        assertThat(texto).doesNotContain("consultor");
+    }
+
+    @Test
+    void vitrineExigeFotoECidadeReal() {
+        assertThat(AnuncioBusca.temProva("http://localhost/foto.jpg", "Formosa - GO")).isTrue();
+        assertThat(AnuncioBusca.temProva(null, "Formosa - GO")).isFalse();
+        assertThat(AnuncioBusca.temProva("http://localhost/foto.jpg", "A confirmar - GO")).isFalse();
+        assertThat(AnuncioBusca.temProva("http://localhost/foto.jpg", "  ")).isFalse();
     }
 }

@@ -48,8 +48,14 @@ export class AnuncioCardComponent {
       this.lote,
       this.anuncio.cidade,
       this.anuncio.titulo,
+      this.coletadoDeGrupo ? 'coletado de um grupo, vendedor ainda não confirmou' : null,
       this.anuncio.status === 'VENDIDO' ? 'vendido' : null,
     ];
     return partes.filter(Boolean).join(', ');
+  }
+
+  /** Lote ouvido no grupo e ainda sem o dono. */
+  get coletadoDeGrupo(): boolean {
+    return !!this.anuncio.capturado && !this.anuncio.reivindicado;
   }
 }

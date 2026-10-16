@@ -55,7 +55,7 @@ public class SecurityConfig {
                         .requestMatchers(HttpMethod.POST, "/api/alertas").permitAll()
                         .requestMatchers(HttpMethod.PUT, "/api/anuncios/*/marcar-vendido").permitAll()
                         .requestMatchers(HttpMethod.POST, "/api/anuncios").authenticated()
-                        .requestMatchers(HttpMethod.POST, "/api/anuncios/*/contato").authenticated()
+                        .requestMatchers(HttpMethod.POST, "/api/anuncios/*/contato").permitAll()
                         .requestMatchers(HttpMethod.PUT, "/api/anuncios/*").authenticated()
                         .requestMatchers(HttpMethod.DELETE, "/api/anuncios/*").authenticated()
                         .requestMatchers(HttpMethod.PATCH, "/api/anuncios/*/status").authenticated()

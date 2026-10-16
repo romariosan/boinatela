@@ -30,5 +30,8 @@
       <ion-icon name="location-outline" aria-hidden="true"></ion-icon>
       {{ anuncio.cidadeFormatada || anuncio.cidade }}
     </p>
+    <p class="aviso-grupo" *ngIf="coletadoDeGrupo">
+      Coletado de um grupo de WhatsApp. O vendedor ainda não confirmou.
+    </p>
   </ion-card-content>
 </ion-card>

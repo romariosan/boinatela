@@ -20,6 +20,11 @@ public interface AnuncioRepository extends JpaRepository<Anuncio, Long>, JpaSpec
             WHERE a.status = br.com.appcompregado.domain.enums.AnuncioStatus.ATIVO
               AND a.ativo = true
               AND a.statusProcessamento <> br.com.appcompregado.domain.enums.StatusProcessamento.RASCUNHO_SEM_FOTO
+              AND a.urlFotoPrincipal IS NOT NULL
+              AND trim(a.urlFotoPrincipal) <> ''
+              AND a.cidade IS NOT NULL
+              AND trim(a.cidade) <> ''
+              AND lower(trim(a.cidade)) NOT LIKE 'a confirmar%'
             GROUP BY a.categoriaAnimal
             HAVING COUNT(a) > 0
             """)
@@ -30,6 +35,11 @@ public interface AnuncioRepository extends JpaRepository<Anuncio, Long>, JpaSpec
             WHERE a.status = br.com.appcompregado.domain.enums.AnuncioStatus.ATIVO
               AND a.ativo = true
               AND a.statusProcessamento <> br.com.appcompregado.domain.enums.StatusProcessamento.RASCUNHO_SEM_FOTO
+              AND a.urlFotoPrincipal IS NOT NULL
+              AND trim(a.urlFotoPrincipal) <> ''
+              AND a.cidade IS NOT NULL
+              AND trim(a.cidade) <> ''
+              AND lower(trim(a.cidade)) NOT LIKE 'a confirmar%'
             ORDER BY a.cidade
             """)
     List<String> cidadesComEstoque();

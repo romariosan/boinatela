@@ -142,8 +142,9 @@ class AssinaturaJobServiceTest {
         mvc.perform(get("/api/anuncios"))
                 .andExpect(jsonPath("$[*].id", hasItem(maisNovo.intValue())))
                 .andExpect(jsonPath("$[*].id", not(hasItem(maisAntigo.intValue()))));
-        Usuario comprador = vendedor(NUMEROS[1], false, null);
-        mvc.perform(post("/api/anuncios/{id}/contato", maisAntigo).header(HttpHeaders.AUTHORIZATION, bearer(comprador)))
+        mvc.perform(post("/api/anuncios/{id}/contato", maisAntigo)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"whatsapp\":\"61988887777\"}"))
                 .andExpect(status().isConflict());
 
         mudarStatus(vendedor, maisAntigo, "ATIVO")
@@ -176,6 +177,7 @@ class AssinaturaJobServiceTest {
         anuncio.setRaca(Raca.NELORE);
         anuncio.setTipoVenda(TipoVenda.CABECA);
         anuncio.getFotos().add("http://localhost/uploads/teste.jpg");
+        anuncio.setUrlFotoPrincipal("http://localhost/uploads/teste.jpg");
         anuncio.setStatus(status);
         anuncio.setDataCriacao(criadoEm);
         anuncio.setVendedor(vendedor);

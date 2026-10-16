@@ -9,6 +9,7 @@ import br.com.appcompregado.service.InteracaoContatoService;
 import br.com.appcompregado.service.LimiteAnunciosAtingidoException;
 import br.com.appcompregado.service.ReivindicacaoService;
 import br.com.appcompregado.web.dto.AnuncioRequest;
+import br.com.appcompregado.web.dto.ContatoLeadRequest;
 import br.com.appcompregado.web.dto.AnuncioResponse;
 import br.com.appcompregado.web.dto.CategoriaEstoqueResponse;
 import br.com.appcompregado.web.dto.ContatoResponse;
@@ -149,8 +150,8 @@ public class AnuncioController {
     }
 
     @PostMapping("/anuncios/{id}/contato")
-    public ContatoResponse contato(@PathVariable Long id, @AuthenticationPrincipal Usuario ignorado) {
-        return anuncioService.contato(id);
+    public ContatoResponse contato(@PathVariable Long id, @Valid @RequestBody ContatoLeadRequest request) {
+        return anuncioService.contato(id, request.whatsapp());
     }
 
     /** 400 e não 403: o app trata 403 como sessão inválida e desloga. */

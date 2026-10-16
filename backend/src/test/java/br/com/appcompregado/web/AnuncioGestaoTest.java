@@ -1,5 +1,7 @@
 package br.com.appcompregado.web;
 
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.hamcrest.Matchers.containsString;
 import static org.hamcrest.Matchers.hasItem;
 import static org.hamcrest.Matchers.not;
 import static org.hamcrest.Matchers.nullValue;
@@ -18,6 +20,7 @@ import br.com.appcompregado.domain.enums.CategoriaAnimal;
 import br.com.appcompregado.domain.enums.Raca;
 import br.com.appcompregado.domain.enums.TipoVenda;
 import br.com.appcompregado.repository.AnuncioRepository;
+import br.com.appcompregado.repository.LeadContatoRepository;
 import br.com.appcompregado.repository.UsuarioRepository;
 import br.com.appcompregado.security.JwtService;
 import java.math.BigDecimal;
@@ -35,6 +38,7 @@ import org.springframework.mock.web.MockMultipartFile;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.request.MockMultipartHttpServletRequestBuilder;
+import org.springframework.transaction.support.TransactionTemplate;
 
 @SpringBootTest
 @AutoConfigureMockMvc
@@ -51,6 +55,12 @@ class AnuncioGestaoTest {
 
     @Autowired
     private AnuncioRepository anuncios;
+
+    @Autowired
+    private LeadContatoRepository leads;
+
+    @Autowired
+    private TransactionTemplate transacao;
 
     @Autowired
     private JwtService jwt;
@@ -79,7 +89,10 @@ class AnuncioGestaoTest {
 
     @AfterEach
     void limpar() {
-        anuncios.findById(anuncioId).ifPresent(anuncios::delete);
+        transacao.executeWithoutResult(status -> {
+            leads.deleteByAnuncioId(anuncioId);
+            anuncios.findById(anuncioId).ifPresent(anuncios::delete);
+        });
     }
 
     @Test
@@ -111,8 +124,22 @@ class AnuncioGestaoTest {
         mvc.perform(get("/api/anuncios/{id}", anuncioId))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.status").value("VENDIDO"));
-        mvc.perform(post("/api/anuncios/{id}/contato", anuncioId).header(HttpHeaders.AUTHORIZATION, bearer(outro)))
+        mvc.perform(post("/api/anuncios/{id}/contato", anuncioId)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"whatsapp\":\"61988887777\"}"))
                 .andExpect(status().isConflict());
+    }
+
+    @Test
+    void contatoSemSenhaGravaOLeadEAbreOWhatsapp() throws Exception {
+        mvc.perform(post("/api/anuncios/{id}/contato", anuncioId)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"whatsapp\":\"(61) 98888-7777\"}"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.mensagemSugerida").value(containsString("Garrotes Brahman")))
+                .andExpect(jsonPath("$.urlWhatsapp").value(containsString("wa.me/55")));
+
+        assertThat(leads.countByAnuncioId(anuncioId)).isEqualTo(1);
     }
 
     @Test

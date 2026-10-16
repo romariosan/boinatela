@@ -184,13 +184,9 @@ export class AnuncioService {
     );
   }
 
-  contato(id: number): Promise<ContatoVendedor> {
+  contato(id: number, whatsapp: string): Promise<ContatoVendedor> {
     return firstValueFrom(
-      this.http.post<ContatoVendedor>(
-        `${environment.apiUrl}/api/anuncios/${id}/contato`,
-        {},
-        { headers: this.authHeaders() }
-      )
+      this.http.post<ContatoVendedor>(`${environment.apiUrl}/api/anuncios/${id}/contato`, { whatsapp })
     );
   }
 

@@ -1,6 +1,7 @@
 package br.com.appcompregado.service;
 
 import br.com.appcompregado.domain.Anuncio;
+import br.com.appcompregado.domain.LeadContato;
 import br.com.appcompregado.domain.Usuario;
 import br.com.appcompregado.domain.enums.AnuncioStatus;
 import br.com.appcompregado.domain.enums.Aptidao;
@@ -9,11 +10,13 @@ import br.com.appcompregado.domain.enums.Raca;
 import br.com.appcompregado.domain.enums.StatusProcessamento;
 import br.com.appcompregado.repository.AnuncioBusca;
 import br.com.appcompregado.repository.AnuncioRepository;
+import br.com.appcompregado.repository.LeadContatoRepository;
 import br.com.appcompregado.repository.UsuarioRepository;
 import br.com.appcompregado.web.dto.AnuncioRequest;
 import br.com.appcompregado.web.dto.AnuncioResponse;
 import br.com.appcompregado.web.dto.CategoriaEstoqueResponse;
 import br.com.appcompregado.web.dto.ContatoResponse;
+import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
 import org.springframework.beans.factory.annotation.Value;
@@ -33,6 +36,8 @@ public class AnuncioService {
 
     private final AnuncioRepository anuncioRepository;
     private final UsuarioRepository usuarioRepository;
+    private final LeadContatoRepository leads;
+    private final InteracaoContatoService interacao;
     private final ArmazenamentoLocalService armazenamento;
     private final AlertaNotificador radar;
     private final VendidoToken vendidoToken;
@@ -41,12 +46,16 @@ public class AnuncioService {
     public AnuncioService(
             AnuncioRepository anuncioRepository,
             UsuarioRepository usuarioRepository,
+            LeadContatoRepository leads,
+            InteracaoContatoService interacao,
             ArmazenamentoLocalService armazenamento,
             AlertaNotificador radar,
             VendidoToken vendidoToken,
             @Value("${compregado.limite.anuncios.gratis}") int limiteAnunciosGratis) {
         this.anuncioRepository = anuncioRepository;
         this.usuarioRepository = usuarioRepository;
+        this.leads = leads;
+        this.interacao = interacao;
         this.armazenamento = armazenamento;
         this.radar = radar;
         this.vendidoToken = vendidoToken;
@@ -202,8 +211,8 @@ public class AnuncioService {
         }
     }
 
-    @Transactional(readOnly = true)
-    public ContatoResponse contato(Long id) {
+    @Transactional
+    public ContatoResponse contato(Long id, String whatsappInformado) {
         Anuncio anuncio = carregar(id);
         if (anuncio.getStatus() == AnuncioStatus.VENDIDO) {
             throw new ResponseStatusException(HttpStatus.CONFLICT, "Este anúncio já foi vendido.");
@@ -211,15 +220,24 @@ public class AnuncioService {
         if (anuncio.getStatus() == AnuncioStatus.PAUSADO) {
             throw new ResponseStatusException(HttpStatus.CONFLICT, "Este anúncio está pausado.");
         }
+        String comprador = PhoneUtils.normalizar(whatsappInformado);
+        if (!PhoneUtils.celularBrasileiro(comprador)) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Informe um WhatsApp com DDD.");
+        }
+        LeadContato lead = new LeadContato();
+        lead.setAnuncio(anuncio);
+        lead.setWhatsapp(comprador);
+        lead.setDataCriacao(LocalDateTime.now());
+        leads.save(lead);
+
         String whatsapp = anuncio.getTelefoneVendedorOriginal();
         if (whatsapp == null || whatsapp.isBlank()) {
             whatsapp = anuncio.getVendedor().getWhatsapp();
         }
         whatsapp = PhoneUtils.normalizar(whatsapp);
-        // Cidade no texto: quem tem vários anúncios identifica o lote sem precisar perguntar.
-        String mensagem = "Olá! Vi no CompreGado o seu anúncio \"" + anuncio.getTitulo() + "\" ("
-                + anuncio.getCidade() + ") e tenho interesse. Ainda está disponível?";
+        String mensagem = "Olá, vi seu lote de " + anuncio.getTitulo() + " no CompreGado e tenho interesse.";
         String url = "https://wa.me/55" + whatsapp + "?text=" + encode(mensagem);
+        interacao.registrar(id);
         return new ContatoResponse(whatsapp, mensagem, url);
     }
 

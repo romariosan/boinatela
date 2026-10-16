@@ -15,7 +15,6 @@ import {
 } from '../models/anuncio';
 import { AnuncioService } from '../services/anuncio.service';
 import { AuthService } from '../services/auth.service';
-import { SessaoService } from '../services/sessao.service';
 
 type FalhaDetalhe = 'nao-encontrado' | 'sem-conexao' | 'servidor';
 
@@ -39,6 +38,8 @@ export class AnuncioDetalhePage {
   carregando = false;
   falha: FalhaDetalhe | null = null;
   abrindoContato = false;
+  modalContato = false;
+  telefoneContato = '';
   modalReivindicacao = false;
   etapaReivindicacao: 'telefone' | 'codigo' = 'telefone';
   telefoneReivindicacao = '';
@@ -56,7 +57,6 @@ export class AnuncioDetalhePage {
     private readonly route: ActivatedRoute,
     private readonly router: Router,
     private readonly anunciosApi: AnuncioService,
-    private readonly sessao: SessaoService,
     private readonly toastCtrl: ToastController,
     private readonly alertCtrl: AlertController,
     private readonly loadingCtrl: LoadingController,
@@ -125,30 +125,58 @@ export class AnuncioDetalhePage {
   }
 
   async falarComVendedor(): Promise<void> {
+    if (!this.anuncio || this.abrindoContato || this.loteVendido) {
+      return;
+    }
+    this.telefoneContato = '';
+    this.modalContato = true;
+  }
+
+  aoDigitarTelefoneContato(event: Event): void {
+    this.telefoneContato = this.mascaraWhatsapp(event);
+  }
+
+  async irParaWhatsapp(): Promise<void> {
     if (!this.anuncio || this.abrindoContato) {
       return;
     }
-    const ok = await this.sessao.exigirLogin();
-    if (!ok) {
+    if (this.telefoneContato.replace(/\D/g, '').length < 10) {
+      await this.avisar('Informe o WhatsApp com DDD.', 'warning');
       return;
     }
     this.atualizar(() => (this.abrindoContato = true));
-    void this.anunciosApi.registrarInteresse(this.anuncio.id).catch(() => undefined);
     try {
-      const contato = await this.anunciosApi.contato(this.anuncio.id);
+      const contato = await this.anunciosApi.contato(this.anuncio.id, this.telefoneContato);
+      this.modalContato = false;
       window.open(contato.urlWhatsapp, '_blank');
     } catch (erro) {
       const status = erro instanceof HttpErrorResponse ? erro.status : -1;
       const mensagem =
         status === 409
           ? 'Este anúncio não está mais disponível.'
-          : status === 0 || !navigator.onLine
-            ? 'Sem internet. Tente de novo quando tiver sinal.'
-            : 'Não foi possível abrir o WhatsApp do vendedor. Tente de novo.';
+          : status === 400
+            ? 'Informe um WhatsApp de celular com DDD.'
+            : status === 0 || !navigator.onLine
+              ? 'Sem internet. Tente de novo quando tiver sinal.'
+              : 'Não foi possível abrir o WhatsApp do vendedor. Tente de novo.';
       await this.avisar(mensagem, status === 409 ? 'warning' : 'danger');
     } finally {
       this.atualizar(() => (this.abrindoContato = false));
     }
+  }
+
+  private mascaraWhatsapp(event: Event): string {
+    const digitos = String((event as CustomEvent).detail.value ?? '').replace(/\D/g, '').slice(0, 11);
+    let texto = digitos;
+    if (digitos.length > 2) {
+      const meio = digitos.length > 10 ? 7 : 6;
+      texto = `(${digitos.slice(0, 2)}) ${digitos.slice(2, meio)}`;
+      if (digitos.length > meio) {
+        texto += `-${digitos.slice(meio)}`;
+      }
+    }
+    (event.target as HTMLIonInputElement).value = texto;
+    return texto;
   }
 
   /** Compartilhar com sócio ou comprador é comum no gado; sem Web Share (WebView Android), vai pelo WhatsApp. */
@@ -187,17 +215,7 @@ export class AnuncioDetalhePage {
   }
 
   aoDigitarTelefoneReivindicacao(event: Event): void {
-    const digitos = String((event as CustomEvent).detail.value ?? '').replace(/\D/g, '').slice(0, 11);
-    let texto = digitos;
-    if (digitos.length > 2) {
-      const meio = digitos.length > 10 ? 7 : 6;
-      texto = `(${digitos.slice(0, 2)}) ${digitos.slice(2, meio)}`;
-      if (digitos.length > meio) {
-        texto += `-${digitos.slice(meio)}`;
-      }
-    }
-    this.telefoneReivindicacao = texto;
-    (event.target as HTMLIonInputElement).value = texto;
+    this.telefoneReivindicacao = this.mascaraWhatsapp(event);
   }
 
   async enviarCodigoReivindicacao(): Promise<void> {

@@ -40,6 +40,7 @@ public final class AnuncioBusca {
             filtros.add(cb.equal(root.get("status"), AnuncioStatus.ATIVO));
             filtros.add(cb.isTrue(root.get("ativo")));
             filtros.add(cb.notEqual(root.get("statusProcessamento"), StatusProcessamento.RASCUNHO_SEM_FOTO));
+            exigirProva(filtros, root, cb);
             for (String termo : termos(q)) {
                 filtros.add(casaComTermo(root, cb, termo));
             }
@@ -61,6 +62,29 @@ public final class AnuncioBusca {
             }
             return cb.and(filtros.toArray(Predicate[]::new));
         };
+    }
+
+    /**
+     * Vitrine e busca só mostram lote com foto real e cidade preenchida. "A confirmar" não entra.
+     */
+    private static void exigirProva(
+            List<Predicate> filtros, Root<Anuncio> root, CriteriaBuilder cb) {
+        filtros.add(cb.isNotNull(root.get("urlFotoPrincipal")));
+        filtros.add(cb.notEqual(cb.trim(root.get("urlFotoPrincipal")), ""));
+        filtros.add(cb.isNotNull(root.get("cidade")));
+        filtros.add(cb.notEqual(cb.trim(root.get("cidade")), ""));
+        filtros.add(cb.not(cb.like(cb.lower(cb.trim(root.get("cidade"))), "a confirmar%")));
+    }
+
+    /** Mesma regra da vitrine, para teste e para não divergir do filtro. */
+    public static boolean temProva(String urlFotoPrincipal, String cidade) {
+        if (urlFotoPrincipal == null || urlFotoPrincipal.isBlank()) {
+            return false;
+        }
+        if (cidade == null || cidade.isBlank()) {
+            return false;
+        }
+        return !cidade.trim().toLowerCase(Locale.ROOT).startsWith("a confirmar");
     }
 
     static List<String> termos(String q) {

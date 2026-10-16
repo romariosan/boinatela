@@ -160,10 +160,12 @@ public class WhatsAppConsultantService {
         bot.enviar(telefone, texto);
     }
 
-    static String conviteFoto(String nome, String link) {
+    /** Rascunho sem foto não leva link: a pessoa só recebe o pedido da foto. */
+    static String conviteFoto(String nome) {
         String pessoa = nome == null || nome.isBlank() ? "produtor" : nome;
-        return "Opa " + pessoa + "! Vi seu gado no grupo. Montei sua vitrine, mas veio sem foto. "
-                + "Clica aqui pra adicionar as fotos e publicar grátis: " + link;
+        return "Opa " + pessoa + "! Vi seu gado no grupo, mas a vitrine ficou sem foto. "
+                + "Manda uma foto do lote aqui neste WhatsApp para publicar grátis. "
+                + "O CompreGado não cobra comissão e a venda continua no seu WhatsApp.";
     }
 
     private static String nome(Usuario vendedor) {
@@ -179,7 +181,7 @@ public class WhatsAppConsultantService {
 
     private static String textoDaAbordagem(Anuncio anuncio, boolean manutencao) {
         if (anuncio.getStatusProcessamento() == StatusProcessamento.RASCUNHO_SEM_FOTO) {
-            return conviteFoto(nome(anuncio.getVendedor()), anuncio.getLinkWeb());
+            return conviteFoto(nome(anuncio.getVendedor()));
         }
         if ("FACEBOOK".equals(anuncio.getOrigem())) {
             return montarFacebook(
@@ -188,7 +190,28 @@ public class WhatsAppConsultantService {
                     anuncio.getRaca() == null ? null : anuncio.getRaca().name(),
                     anuncio.getLinkWeb());
         }
-        return montar(manutencao, anuncio.getLinkWeb());
+        if (manutencao) {
+            return montar(true, anuncio.getLinkWeb());
+        }
+        return montarApresentacao(
+                nome(anuncio.getVendedor()),
+                anuncio.getQuantidade(),
+                anuncio.getRaca() == null ? null : anuncio.getRaca().name(),
+                anuncio.getLinkWeb());
+    }
+
+    /**
+     * Primeiro contato. Cita o lote, deixa claro que não há comissão e manda o link para reivindicar.
+     */
+    static String montarApresentacao(String nome, Integer quantidade, String raca, String link) {
+        String pessoa = nome == null || nome.isBlank() ? "produtor" : nome;
+        String lote = quantidade != null && quantidade > 0
+                ? "dos " + quantidade + " " + rotuloRaca(raca)
+                : "de " + rotuloRaca(raca);
+        return escolher(new String[] {"Opa", "Fala"}) + " " + pessoa + "! Seu post " + lote
+                + " já está no ar na vitrine da nossa região. "
+                + "O CompreGado não cobra comissão e a venda continua direto no seu WhatsApp. "
+                + "Dá uma olhada como ficou e clica pra reivindicar (é grátis): " + link;
     }
 
     static String montarFacebook(String nome, Integer quantidade, String raca, String link) {
@@ -203,7 +226,8 @@ public class WhatsAppConsultantService {
                 + escolher(new String[] {"gratuita", "organizada"})
                 + " pra sua boiada no aplicativo CompreGado pra "
                 + escolher(new String[] {"te ajudar a", "facilitar"})
-                + " vender mais rápido. Dá uma olhada: " + link
+                + " vender mais rápido. O CompreGado não cobra comissão e a venda continua direto no seu WhatsApp. "
+                + "Dá uma olhada: " + link
                 + ". Se precisar editar alguma coisa, é só clicar no botão no final da página!";
     }
 

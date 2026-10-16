@@ -265,3 +265,39 @@
     </ion-content>
   </ng-template>
 </ion-modal>
+
+<ion-modal [isOpen]="modalContato" (didDismiss)="modalContato = false">
+  <ng-template>
+    <ion-header>
+      <ion-toolbar color="primary">
+        <ion-title>Falar com o Vendedor</ion-title>
+        <ion-buttons slot="end">
+          <ion-button (click)="modalContato = false" [disabled]="abrindoContato">Fechar</ion-button>
+        </ion-buttons>
+      </ion-toolbar>
+    </ion-header>
+    <ion-content class="ion-padding">
+      <p>Confirma seu WhatsApp para o vendedor saber que você é da região. Sem comissão.</p>
+      <ion-input
+        fill="outline"
+        label="WhatsApp com DDD"
+        labelPlacement="stacked"
+        type="tel"
+        inputmode="numeric"
+        autocomplete="tel-national"
+        [value]="telefoneContato"
+        (ionInput)="aoDigitarTelefoneContato($event)"
+        placeholder="(61) 99999-9999"
+      ></ion-input>
+      <ion-button
+        expand="block"
+        class="ion-margin-top botao-whatsapp"
+        [disabled]="abrindoContato"
+        (click)="irParaWhatsapp()"
+      >
+        <ion-spinner *ngIf="abrindoContato" slot="start" name="crescent"></ion-spinner>
+        {{ abrindoContato ? 'Abrindo...' : 'Ir para o WhatsApp' }}
+      </ion-button>
+    </ion-content>
+  </ng-template>
+</ion-modal>
