@@ -74,7 +74,9 @@
         />
       </ng-template>
 
-      <span class="selo-vendido" *ngIf="anuncio.status === 'VENDIDO'">VENDIDO</span>
+      <span class="selo-vendido" *ngIf="loteVendido">LOTE VENDIDO PELO COMPREGADO</span>
+      <span class="tag-origem tag-agregado" *ngIf="agregadoDeGrupo">Agregado de Grupo</span>
+      <span class="tag-origem tag-confirmado" *ngIf="loteConfirmado">✅ Lote Confirmado pelo Vendedor</span>
     </div>
 
     <div class="conteudo">
@@ -84,9 +86,19 @@
         <h1 class="titulo">{{ anuncio.titulo }}</h1>
         <p class="local">
           <ion-icon name="location-outline" aria-hidden="true"></ion-icon>
-          {{ anuncio.cidade }}
+          {{ anuncio.cidadeFormatada || anuncio.cidade }}
         </p>
       </section>
+
+      <ion-card class="aviso-origem" color="warning" *ngIf="agregadoDeGrupo">
+        <ion-card-content>
+          ℹ️ Informação agregada de grupos rurais da região. Confirme os dados com o vendedor.
+        </ion-card-content>
+      </ion-card>
+
+      <ion-card class="aviso-origem" color="success" *ngIf="loteConfirmado">
+        <ion-card-content>Anúncio verificado pelo proprietário.</ion-card-content>
+      </ion-card>
 
       <section class="ficha" aria-label="Dados do lote">
         <div class="item-ficha" *ngFor="let item of ficha">
@@ -99,6 +111,19 @@
       <section class="descricao" *ngIf="anuncio.descricao">
         <h2>Sobre o lote</h2>
         <p>{{ anuncio.descricao }}</p>
+      </section>
+
+      <section class="reivindicacao" *ngIf="anuncio.capturado && !anuncio.reivindicado">
+        <ion-button expand="block" fill="outline" color="secondary" (click)="abrirReivindicacao()">
+          Este gado é seu? Reivindique para editar
+        </ion-button>
+      </section>
+
+      <section class="reivindicacao" *ngIf="anuncio.reivindicado">
+        <ion-button expand="block" class="baixar-app" [href]="googlePlayUrl" target="_blank" rel="noopener">
+          <ion-icon slot="start" name="logo-google-playstore"></ion-icon>
+          Baixar Aplicativo Oficial
+        </ion-button>
       </section>
 
       <section class="vendedor">
@@ -117,11 +142,11 @@
   <ion-toolbar>
     <div class="rodape">
       <div class="rodape-preco">
-        <strong>{{ anuncio.preco | currency: 'BRL' }}</strong>
+        <strong>{{ precoLabel(anuncio) }}</strong>
         <span>{{ unidade(anuncio) }} · {{ anuncio.cidade }}</span>
       </div>
       <ion-button
-        *ngIf="anuncio.status === 'ATIVO'; else indisponivel"
+        *ngIf="anuncio.status === 'ATIVO' && anuncio.ativo !== false && anuncio.statusProcessamento !== 'RASCUNHO_SEM_FOTO'; else indisponivel"
         class="botao-whatsapp botao-contato"
         [disabled]="abrindoContato"
         (click)="falarComVendedor()"
@@ -132,9 +157,111 @@
       </ion-button>
       <ng-template #indisponivel>
         <ion-button class="botao-contato" color="medium" disabled>
-          {{ anuncio.status === 'PAUSADO' ? 'Anúncio pausado' : 'Já vendido' }}
+          {{
+            anuncio.statusProcessamento === 'RASCUNHO_SEM_FOTO'
+              ? 'Aguardando foto'
+              : anuncio.status === 'PAUSADO'
+                ? 'Anúncio pausado'
+                : 'Já vendido'
+          }}
         </ion-button>
       </ng-template>
     </div>
+    <ion-button fill="clear" size="small" expand="block" class="link-isencao" (click)="modalTermos = true">
+      Entenda como os anúncios são publicados
+    </ion-button>
   </ion-toolbar>
 </ion-footer>
+
+<ion-modal [isOpen]="modalTermos" (didDismiss)="modalTermos = false">
+  <ng-template>
+    <ion-header>
+      <ion-toolbar color="primary">
+        <ion-title>Como os anúncios são publicados</ion-title>
+        <ion-buttons slot="end">
+          <ion-button (click)="modalTermos = false">Fechar</ion-button>
+        </ion-buttons>
+      </ion-toolbar>
+    </ion-header>
+    <ion-content class="ion-padding">
+      <p>
+        O CompreGado é um classificado. Parte dos lotes é publicada pelo próprio vendedor. Outra parte é agregada de
+        grupos de WhatsApp da região, para o anúncio não se perder no meio da conversa.
+      </p>
+      <p>
+        Não garantimos que o animal exista, que o preço seja o pedido nem que a foto corresponda ao lote no curral.
+        A negociação, a visita e o pagamento acontecem direto entre comprador e vendedor, fora do aplicativo.
+      </p>
+      <p>
+        Anúncio com a marca “Agregado de Grupo” ainda não foi confirmado por quem postou. Confirme raça, quantidade,
+        cidade e preço no WhatsApp do vendedor antes de se deslocar.
+      </p>
+      <p>
+        O CompreGado não é parte do contrato de compra e venda e não cobra comissão sobre o gado.
+      </p>
+    </ion-content>
+  </ng-template>
+</ion-modal>
+
+<ion-modal [isOpen]="modalReivindicacao" (didDismiss)="modalReivindicacao = false">
+  <ng-template>
+    <ion-header>
+      <ion-toolbar color="primary">
+        <ion-title>Reivindicar anúncio</ion-title>
+        <ion-buttons slot="end">
+          <ion-button (click)="fecharReivindicacao()" [disabled]="enviandoOtp">Fechar</ion-button>
+        </ion-buttons>
+      </ion-toolbar>
+    </ion-header>
+    <ion-content class="ion-padding">
+      <ng-container *ngIf="etapaReivindicacao === 'telefone'; else codigoReivindicacaoTpl">
+        <p>Informe o WhatsApp que anunciou este gado. Vamos enviar um código de 6 dígitos.</p>
+        <ion-input
+          fill="outline"
+          label="WhatsApp com DDD"
+          labelPlacement="stacked"
+          type="tel"
+          inputmode="numeric"
+          autocomplete="tel-national"
+          [value]="telefoneReivindicacao"
+          (ionInput)="aoDigitarTelefoneReivindicacao($event)"
+          placeholder="(61) 99999-9999"
+        ></ion-input>
+        <ion-button
+          expand="block"
+          class="ion-margin-top botao-whatsapp"
+          [disabled]="enviandoOtp"
+          (click)="enviarCodigoReivindicacao()"
+        >
+          <ion-spinner *ngIf="enviandoOtp" slot="start" name="crescent"></ion-spinner>
+          {{ enviandoOtp ? 'Enviando...' : 'Enviar Código' }}
+        </ion-button>
+      </ng-container>
+      <ng-template #codigoReivindicacaoTpl>
+        <p>Digite o código de 6 dígitos que chegou no WhatsApp <strong>{{ telefoneReivindicacao }}</strong>.</p>
+        <ion-input
+          fill="outline"
+          label="Código"
+          labelPlacement="stacked"
+          type="text"
+          inputmode="numeric"
+          maxlength="6"
+          placeholder="000000"
+          [(ngModel)]="codigoReivindicacao"
+        ></ion-input>
+        <ion-button
+          expand="block"
+          class="ion-margin-top botao-whatsapp"
+          [disabled]="enviandoOtp"
+          (click)="confirmarReivindicacao()"
+        >
+          <ion-spinner *ngIf="enviandoOtp" slot="start" name="crescent"></ion-spinner>
+          {{ enviandoOtp ? 'Confirmando...' : 'Confirmar' }}
+        </ion-button>
+        <ion-button expand="block" fill="clear" [disabled]="enviandoOtp" (click)="enviarCodigoReivindicacao()">
+          Reenviar código
+        </ion-button>
+      </ng-template>
+    </ion-content>
+  </ng-template>
+</ion-modal>

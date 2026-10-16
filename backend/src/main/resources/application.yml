@@ -21,7 +21,43 @@ spring:
 server:
   port: 8080
 
+gemini:
+  api:
+    # Chave só por ambiente (GEMINI_API_KEY). Vazio = o ouvinte grava o texto original, sem chamar a IA.
+    key: ${GEMINI_API_KEY:}
+    url: https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent
+
+whatsapp:
+  api:
+    url: ${WHATSAPP_API_URL:http://localhost:8080/evolution-api}
+    key: ${WHATSAPP_API_KEY:}
+
 compregado:
+  app:
+    googleplay:
+      url: https://play.google.com/store/apps/details?id=br.com.appcompregado
+  web:
+    base-url: https://appcompregado.com.br
+  whatsapp:
+    # Chip 1 manda OTP. Chip 2 só escuta grupo. Chip 3 manda a prospecção.
+    system:
+      number: ${COMPREGADO_WHATSAPP_SYSTEM_NUMBER:5561999999991}
+      instance: ${COMPREGADO_WHATSAPP_SYSTEM_INSTANCE:compregado-system}
+    scraper:
+      number: ${COMPREGADO_WHATSAPP_SCRAPER_NUMBER:5561999999992}
+      instance: ${COMPREGADO_WHATSAPP_SCRAPER_INSTANCE:compregado-scraper}
+    consultant:
+      number: ${COMPREGADO_WHATSAPP_CONSULTANT_NUMBER:5561999999993}
+      instance: ${COMPREGADO_WHATSAPP_CONSULTANT_INSTANCE:compregado-consultant}
+  consultor:
+    # A cada minuto, pega o que completou 30 minutos. "-" desliga.
+    cron: "0 * * * * ?"
+  retencao:
+    dias: 15
+    # Todo dia às 9h (Brasília). "-" desliga.
+    cron: "0 0 9 * * ?"
+  radar:
+    enabled: true
   limite:
     anuncios:
       # Anúncios ATIVOS por vendedor sem plano PRO (isPremium). Em produção: COMPREGADO_LIMITE_ANUNCIOS_GRATIS.

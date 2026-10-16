@@ -65,6 +65,12 @@ export class AnuncioService {
     );
   }
 
+  reivindicar(id: number, whatsapp: string, otp: string): Promise<Anuncio> {
+    return firstValueFrom(
+      this.http.post<Anuncio>(`${environment.apiUrl}/api/anuncios/${id}/reivindicar`, { whatsapp, otp })
+    );
+  }
+
   categorias(): Promise<CategoriaEstoque[]> {
     return firstValueFrom(
       this.http.get<CategoriaEstoque[]>(`${environment.apiUrl}/api/categorias`)
@@ -141,6 +147,41 @@ export class AnuncioService {
     }
     form.append('dados', new Blob([JSON.stringify(dados)], { type: 'application/json' }));
     return form;
+  }
+
+  /** Não bloqueia a abertura do WhatsApp: o aviso ao vendedor sai em segundo plano. */
+  registrarInteresse(id: number): Promise<void> {
+    return firstValueFrom(
+      this.http.post<void>(`${environment.apiUrl}/api/anuncios/${id}/registrar-intere-contato`, null, {
+        headers: this.authHeaders(),
+      })
+    );
+  }
+
+  criarAlerta(dados: {
+    whatsapp: string;
+    raca?: string;
+    categoriaPilar?: string;
+    cidade?: string;
+  }): Promise<{ id: number }> {
+    return firstValueFrom(
+      this.http.post<{ id: number }>(`${environment.apiUrl}/api/alertas`, {
+        whatsapp: dados.whatsapp,
+        raca: dados.raca ?? '',
+        categoriaPilar: dados.categoriaPilar ?? '',
+        cidade: dados.cidade ?? '',
+      })
+    );
+  }
+
+  marcarVendido(id: number, token: string | null): Promise<Anuncio> {
+    const params = token ? new HttpParams().set('token', token) : undefined;
+    return firstValueFrom(
+      this.http.put<Anuncio>(`${environment.apiUrl}/api/anuncios/${id}/marcar-vendido`, null, {
+        headers: this.authHeaders(),
+        params,
+      })
+    );
   }
 
   contato(id: number): Promise<ContatoVendedor> {

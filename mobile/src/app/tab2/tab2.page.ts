@@ -1,7 +1,8 @@
+import { HttpErrorResponse } from '@angular/common/http';
 import { ChangeDetectorRef, Component, NgZone } from '@angular/core';
 import { Router } from '@angular/router';
-import { ToastController } from '@ionic/angular/lazy';
-import { Anuncio, CategoriaAnimal, CategoriaEstoque, ROTULOS } from '../models/anuncio';
+import { LoadingController, ToastController } from '@ionic/angular/lazy';
+import { Anuncio, CategoriaAnimal, CategoriaEstoque, RACAS, ROTULOS } from '../models/anuncio';
 import { UFS_REGIAO, UF_PADRAO, separarCidade } from '../models/localidade';
 import { AnuncioService } from '../services/anuncio.service';
 import { AtalhoBuscaService } from '../services/atalho-busca.service';
@@ -23,6 +24,9 @@ export class Tab2Page {
   anuncios: Anuncio[] = [];
   carregando = false;
   buscou = false;
+  modalRadar = false;
+  whatsappRadar = '';
+  enviandoAlerta = false;
   readonly rotulos = ROTULOS;
   /** DF e GO; "Todas as UFs" fica logo abaixo delas, antes das demais. */
   readonly ufsDaRegiao = UFS_REGIAO.slice(0, 2);
@@ -36,6 +40,7 @@ export class Tab2Page {
     private readonly seletorCidade: SeletorCidadeService,
     private readonly router: Router,
     private readonly toastCtrl: ToastController,
+    private readonly loadingCtrl: LoadingController,
     private readonly zone: NgZone,
     private readonly cdr: ChangeDetectorRef
   ) {}
@@ -77,6 +82,23 @@ export class Tab2Page {
     void this.buscar();
   }
 
+  get cidadesGo(): string[] {
+    return this.cidades.filter(item => separarCidade(item).uf === 'GO');
+  }
+
+  get cidadeGo(): string {
+    return separarCidade(this.cidade).uf === 'GO' ? this.cidade : '';
+  }
+
+  aoMudarCidadeGo(event: Event): void {
+    const valor = String((event as CustomEvent).detail.value ?? '');
+    this.atualizar(() => {
+      this.uf = UF_PADRAO;
+      this.cidade = valor;
+    });
+    void this.buscar();
+  }
+
   aoMudarUf(event: Event): void {
     this.uf = (event as CustomEvent).detail.value ?? '';
     this.cidade = '';
@@ -106,6 +128,77 @@ export class Tab2Page {
 
   verDetalhes(id: number): void {
     void this.router.navigate(['/tabs/tab2/anuncio', id]);
+  }
+
+  abrirRadar(): void {
+    if (this.enviandoAlerta) {
+      return;
+    }
+    this.whatsappRadar = '';
+    this.modalRadar = true;
+  }
+
+  fecharRadar(): void {
+    if (this.enviandoAlerta) {
+      return;
+    }
+    this.modalRadar = false;
+  }
+
+  aoDigitarWhatsappRadar(event: Event): void {
+    const digitos = String((event as CustomEvent).detail.value ?? '').replace(/\D/g, '').slice(0, 11);
+    let texto = digitos;
+    if (digitos.length > 2) {
+      const meio = digitos.length > 10 ? 7 : 6;
+      texto = `(${digitos.slice(0, 2)}) ${digitos.slice(2, meio)}`;
+      if (digitos.length > meio) {
+        texto += `-${digitos.slice(meio)}`;
+      }
+    }
+    this.whatsappRadar = texto;
+    (event.target as HTMLIonInputElement).value = texto;
+  }
+
+  async confirmarRadar(): Promise<void> {
+    if (this.enviandoAlerta) {
+      return;
+    }
+    if (this.whatsappRadar.replace(/\D/g, '').length < 10) {
+      await this.avisar('Informe o WhatsApp com DDD.', 'warning');
+      return;
+    }
+    const raca = this.racaDoTermo();
+    if (!this.categoria && !this.cidade && !raca) {
+      await this.avisar('Escolha um animal, uma cidade ou busque uma raça para o radar saber o que avisar.', 'warning');
+      return;
+    }
+    this.enviandoAlerta = true;
+    const loading = await this.loadingCtrl.create({
+      message: 'Ativando radar...',
+      spinner: 'crescent',
+      backdropDismiss: false,
+    });
+    await loading.present();
+    try {
+      await this.anunciosApi.criarAlerta({
+        whatsapp: this.whatsappRadar,
+        raca,
+        categoriaPilar: this.categoria,
+        cidade: this.cidade,
+      });
+      this.modalRadar = false;
+      await this.avisar('Radar ativado. Avisamos neste WhatsApp quando chegar um lote assim.', 'success');
+    } catch (erro) {
+      const status = erro instanceof HttpErrorResponse ? erro.status : 0;
+      await this.avisar(
+        status === 429 ? 'Este WhatsApp já tem alertas demais.' : 'Não foi possível ativar o radar agora.',
+        'danger'
+      );
+    } finally {
+      this.enviandoAlerta = false;
+      await loading.dismiss();
+      this.cdr.detectChanges();
+    }
   }
 
   private async carregarFiltros(): Promise<void> {
@@ -154,6 +247,20 @@ export class Tab2Page {
       });
       await toast.present();
     }
+  }
+
+  private racaDoTermo(): string {
+    const termo = this.termo.trim().toLowerCase();
+    if (!termo) {
+      return '';
+    }
+    const achou = RACAS.find(raca => ROTULOS[raca].toLowerCase() === termo || raca.toLowerCase() === termo);
+    return achou ?? '';
+  }
+
+  private async avisar(message: string, color: string): Promise<void> {
+    const toast = await this.toastCtrl.create({ message, color, duration: 3500, position: 'top' });
+    await toast.present();
   }
 
   private atualizar(mudanca: () => void): void {

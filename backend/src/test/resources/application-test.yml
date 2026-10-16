@@ -15,6 +15,12 @@ compregado:
   assinatura:
     # Os testes chamam a rotina direto; o agendamento não pode disparar no meio deles.
     cron: "-"
+  consultor:
+    cron: "-"
+  retencao:
+    cron: "-"
+  radar:
+    enabled: false
 
 app:
   uploads:

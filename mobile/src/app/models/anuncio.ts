@@ -73,7 +73,12 @@ export function unidadePreco(tipoVenda: TipoVenda): string {
   return tipoVenda === 'KG' ? '/kg' : tipoVenda === 'LOTE' ? '/lote' : '/cabeça';
 }
 
-export function formatarPreco(anuncio: Pick<Anuncio, 'preco' | 'tipoVenda'>): string {
+export function formatarPreco(
+  anuncio: Pick<Anuncio, 'preco' | 'tipoVenda'> & { precoFormatado?: string }
+): string {
+  if (!anuncio.preco) {
+    return anuncio.precoFormatado || 'Preço a Combinar';
+  }
   return `${formatarMoeda(anuncio.preco)} ${unidadePreco(anuncio.tipoVenda)}`;
 }
 
@@ -144,6 +149,19 @@ export interface Anuncio {
   status: AnuncioStatus;
   vendedorId: number;
   vendedorNome: string;
+  /** Lote ouvido no grupo e confirmado pelo dono. */
+  reivindicado?: boolean;
+  /** true quando o anúncio veio da escuta, não de uma publicação no app. */
+  capturado?: boolean;
+  /** false quando o lote foi marcado como vendido. */
+  ativo?: boolean;
+  /** "Preço a Combinar" quando o valor é zero. */
+  precoFormatado?: string;
+  /** "📍 Cidade - UF". */
+  cidadeFormatada?: string;
+  uf?: string | null;
+  urlFotoPrincipal?: string | null;
+  statusProcessamento?: 'PUBLICADO' | 'RASCUNHO_SEM_FOTO';
 }
 
 export interface NovoAnuncio {

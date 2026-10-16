@@ -59,6 +59,10 @@ public class Usuario {
     @JsonIgnore
     private LocalDateTime trocaSenhaBloqueadaAte;
 
+    /** Última mensagem do consultor (Chip 3) para este número. Nulo = nunca abordado. */
+    @JsonIgnore
+    private LocalDateTime dataUltimaAbordagemBot;
+
     public Long getId() {
         return id;
     }
@@ -146,5 +150,13 @@ public class Usuario {
 
     public void setTrocaSenhaBloqueadaAte(LocalDateTime trocaSenhaBloqueadaAte) {
         this.trocaSenhaBloqueadaAte = trocaSenhaBloqueadaAte;
+    }
+
+    public LocalDateTime getDataUltimaAbordagemBot() {
+        return dataUltimaAbordagemBot;
+    }
+
+    public void setDataUltimaAbordagemBot(LocalDateTime dataUltimaAbordagemBot) {
+        this.dataUltimaAbordagemBot = dataUltimaAbordagemBot;
     }
 }

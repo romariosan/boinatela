@@ -23,14 +23,52 @@
   margin: 0 auto;
 }
 
+.tag-origem {
+  position: absolute;
+  top: 12px;
+  left: 12px;
+  z-index: 2;
+  max-width: calc(100% - 24px);
+  padding: 6px 10px;
+  border-radius: 8px;
+  font-size: 0.8rem;
+  font-weight: 700;
+}
+
+.tag-agregado {
+  background: #5c5346;
+  color: #f3e6c0;
+}
+
+.tag-confirmado {
+  background: var(--ion-color-success);
+  color: #04140c;
+}
+
+.aviso-origem {
+  margin: 0 16px 8px;
+}
+
+.link-isencao {
+  margin-top: 0;
+  --color: var(--ion-color-medium);
+  font-size: 0.8rem;
+}
+
 .selo-vendido {
   position: absolute;
-  top: 16px;
   left: 0;
+  right: 0;
+  bottom: 0;
   z-index: 2;
-  padding: 6px 16px;
-  border-radius: 0 8px 8px 0;
-  font-size: 0.9rem;
+  padding: 10px 12px;
+  border-radius: 0;
+  background: var(--ion-color-danger);
+  color: #fff;
+  font-size: 0.95rem;
+  font-weight: 700;
+  text-align: center;
+  letter-spacing: 0.02em;
 }
 
 .conteudo {
@@ -230,6 +268,16 @@
     height: 140px;
     --border-radius: 12px;
   }
+}
+
+.reivindicacao {
+  margin-top: 20px;
+}
+
+.baixar-app {
+  min-height: 56px;
+  font-size: 1.05rem;
+  --border-radius: 12px;
 }
 
 .estado {

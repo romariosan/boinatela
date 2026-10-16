@@ -3,7 +3,6 @@ package br.com.appcompregado.service;
 import br.com.appcompregado.domain.CodigoRecuperacao;
 import br.com.appcompregado.domain.Usuario;
 import br.com.appcompregado.repository.CodigoRecuperacaoRepository;
-import br.com.appcompregado.repository.UsuarioRepository;
 import br.com.appcompregado.web.dto.AuthResponse;
 import br.com.appcompregado.web.dto.EsqueciSenhaResponse;
 import java.security.SecureRandom;
@@ -29,23 +28,23 @@ public class RecuperacaoSenhaService {
 
     private static final SecureRandom RANDOM = new SecureRandom();
 
-    private final UsuarioRepository usuarios;
     private final CodigoRecuperacaoRepository codigos;
     private final PasswordEncoder passwordEncoder;
-    private final WhatsappBotService bot;
+    private final WhatsAppSystemService chipSistema;
     private final AuthService authService;
+    private final ReivindicacaoService reivindicacao;
 
     public RecuperacaoSenhaService(
-            UsuarioRepository usuarios,
             CodigoRecuperacaoRepository codigos,
             PasswordEncoder passwordEncoder,
-            WhatsappBotService bot,
-            AuthService authService) {
-        this.usuarios = usuarios;
+            WhatsAppSystemService chipSistema,
+            AuthService authService,
+            ReivindicacaoService reivindicacao) {
         this.codigos = codigos;
         this.passwordEncoder = passwordEncoder;
-        this.bot = bot;
+        this.chipSistema = chipSistema;
         this.authService = authService;
+        this.reivindicacao = reivindicacao;
     }
 
     /** Se o envio falhar, a transação desfaz o código salvo: o usuário pode pedir de novo na hora. */
@@ -73,7 +72,7 @@ public class RecuperacaoSenhaService {
         registro.setDataExpiracao(agora.plus(VALIDADE));
         codigos.save(registro);
 
-        bot.enviar(usuario.getWhatsapp(),
+        chipSistema.enviar(usuario.getWhatsapp(),
                 "CompreGado: seu código para redefinir a senha é " + codigo
                         + ". Ele vale por 10 minutos. Se não foi você, ignore esta mensagem.");
         return new EsqueciSenhaResponse(VALIDADE.toSeconds(), INTERVALO_REENVIO.toSeconds());
@@ -105,11 +104,12 @@ public class RecuperacaoSenhaService {
         // O código chegou por WhatsApp e foi digitado no app: isso já prova que o número é do usuário.
         usuario.setTelefoneVerificado(true);
         usuario.setCodigoVerificacao(null);
+        reivindicacao.vincularVerificados(usuario);
         return authService.toResponse(usuario);
     }
 
     private Usuario buscarUsuario(String whatsappInformado) {
-        return usuarios.findByWhatsapp(AuthService.normalizarWhatsapp(whatsappInformado))
+        return authService.localizarPorTelefone(whatsappInformado)
                 .orElseThrow(() -> new ResponseStatusException(
                         HttpStatus.NOT_FOUND, "Número de WhatsApp não cadastrado"));
     }

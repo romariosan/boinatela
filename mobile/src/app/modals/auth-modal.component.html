@@ -108,8 +108,9 @@
         ></ion-input>
       </div>
       <ion-button expand="block" class="ion-margin-top botao-whatsapp" [disabled]="carregando" (click)="enviarCodigo()">
-        <ion-icon slot="start" name="logo-whatsapp"></ion-icon>
-        Enviar Código
+        <ion-spinner *ngIf="carregando" slot="start" name="crescent"></ion-spinner>
+        <ion-icon *ngIf="!carregando" slot="start" name="logo-whatsapp"></ion-icon>
+        {{ carregando ? 'Enviando...' : 'Enviar Código' }}
       </ion-button>
     </ng-container>
 

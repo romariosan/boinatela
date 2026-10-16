@@ -11,9 +11,7 @@ final class TelefoneBr {
     }
 
     static boolean mesmoNumero(String a, String b) {
-        String na = semNonoDigito(nacional(a));
-        String nb = semNonoDigito(nacional(b));
-        return na.length() >= 10 && na.equals(nb);
+        return PhoneUtils.mesmoNumero(a, b);
     }
 
     static String nacional(String numero) {
@@ -28,10 +26,4 @@ final class TelefoneBr {
         return digitos;
     }
 
-    private static String semNonoDigito(String nacional) {
-        if (nacional.length() == 11 && nacional.charAt(2) == '9') {
-            return nacional.substring(0, 2) + nacional.substring(3);
-        }
-        return nacional;
-    }
 }

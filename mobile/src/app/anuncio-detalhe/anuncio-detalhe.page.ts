@@ -1,7 +1,8 @@
 import { HttpErrorResponse } from '@angular/common/http';
 import { ChangeDetectorRef, Component, ElementRef, NgZone, ViewChild } from '@angular/core';
-import { ActivatedRoute } from '@angular/router';
-import { ToastController } from '@ionic/angular/lazy';
+import { ActivatedRoute, Router } from '@angular/router';
+import { AlertController, LoadingController, ToastController } from '@ionic/angular/lazy';
+import { environment } from '../../environments/environment';
 import type { SwiperContainer } from 'swiper/element';
 import {
   Anuncio,
@@ -12,6 +13,7 @@ import {
   unidadePreco,
 } from '../models/anuncio';
 import { AnuncioService } from '../services/anuncio.service';
+import { AuthService } from '../services/auth.service';
 import { SessaoService } from '../services/sessao.service';
 
 type FalhaDetalhe = 'nao-encontrado' | 'sem-conexao' | 'servidor';
@@ -36,23 +38,56 @@ export class AnuncioDetalhePage {
   carregando = false;
   falha: FalhaDetalhe | null = null;
   abrindoContato = false;
+  modalReivindicacao = false;
+  etapaReivindicacao: 'telefone' | 'codigo' = 'telefone';
+  telefoneReivindicacao = '';
+  codigoReivindicacao = '';
+  enviandoOtp = false;
+  readonly googlePlayUrl = environment.googlePlayUrl;
   readonly fotoPlaceholder = FOTO_PLACEHOLDER_GADO;
   readonly rotulos = ROTULOS;
 
   private id = 0;
+  private tokenVendido: string | null = null;
+  private perguntouVendido = false;
 
   constructor(
     private readonly route: ActivatedRoute,
+    private readonly router: Router,
     private readonly anunciosApi: AnuncioService,
     private readonly sessao: SessaoService,
     private readonly toastCtrl: ToastController,
+    private readonly alertCtrl: AlertController,
+    private readonly loadingCtrl: LoadingController,
+    private readonly auth: AuthService,
     private readonly zone: NgZone,
     private readonly cdr: ChangeDetectorRef
   ) {}
 
   ionViewWillEnter(): void {
-    this.id = Number(this.route.snapshot.paramMap.get('id'));
+    this.perguntouVendido = false;
+    this.id = this.idDaRota();
+    this.tokenVendido = this.tokenDaRota();
     void this.carregar();
+  }
+
+  modalTermos = false;
+
+  get loteVendido(): boolean {
+    if (!this.anuncio || this.anuncio.statusProcessamento === 'RASCUNHO_SEM_FOTO') {
+      return false;
+    }
+    return this.anuncio.status === 'VENDIDO' || this.anuncio.ativo === false;
+  }
+
+  /** Lote ouvido no grupo e ainda não confirmado por quem postou. */
+  get agregadoDeGrupo(): boolean {
+    return !!this.anuncio?.capturado && !this.anuncio.reivindicado;
+  }
+
+  /** Publicado pelo dono no app, ou reivindicado depois da escuta. */
+  get loteConfirmado(): boolean {
+    return !!this.anuncio && (!!this.anuncio.reivindicado || !this.anuncio.capturado);
   }
 
   async carregar(): Promise<void> {
@@ -68,6 +103,9 @@ export class AnuncioDetalhePage {
         this.carregando = false;
       });
       this.iniciarCarrossel();
+      if (this.tokenVendido && this.router.url.includes('/vendido')) {
+        void this.perguntarMarcarVendido();
+      }
     } catch (erro) {
       const status = erro instanceof HttpErrorResponse ? erro.status : -1;
       this.atualizar(() => {
@@ -86,6 +124,7 @@ export class AnuncioDetalhePage {
       return;
     }
     this.atualizar(() => (this.abrindoContato = true));
+    void this.anunciosApi.registrarInteresse(this.anuncio.id).catch(() => undefined);
     try {
       const contato = await this.anunciosApi.contato(this.anuncio.id);
       window.open(contato.urlWhatsapp, '_blank');
@@ -108,7 +147,7 @@ export class AnuncioDetalhePage {
     if (!this.anuncio) {
       return;
     }
-    const url = `https://appcompregado.com.br/tabs/tab1/anuncio/${this.anuncio.id}`;
+    const url = `${environment.webBaseUrl}/lote/${this.anuncio.id}`;
     const texto = `${this.anuncio.titulo} — ${this.precoLabel(this.anuncio)} em ${this.anuncio.cidade}. Veja no CompreGado:`;
     if (navigator.share) {
       try {
@@ -119,6 +158,138 @@ export class AnuncioDetalhePage {
       return;
     }
     window.open(`https://wa.me/?text=${encodeURIComponent(`${texto} ${url}`)}`, '_blank');
+  }
+
+  abrirReivindicacao(): void {
+    if (this.enviandoOtp) {
+      return;
+    }
+    this.etapaReivindicacao = 'telefone';
+    this.telefoneReivindicacao = '';
+    this.codigoReivindicacao = '';
+    this.modalReivindicacao = true;
+  }
+
+  fecharReivindicacao(): void {
+    if (this.enviandoOtp) {
+      return;
+    }
+    this.modalReivindicacao = false;
+  }
+
+  aoDigitarTelefoneReivindicacao(event: Event): void {
+    const digitos = String((event as CustomEvent).detail.value ?? '').replace(/\D/g, '').slice(0, 11);
+    let texto = digitos;
+    if (digitos.length > 2) {
+      const meio = digitos.length > 10 ? 7 : 6;
+      texto = `(${digitos.slice(0, 2)}) ${digitos.slice(2, meio)}`;
+      if (digitos.length > meio) {
+        texto += `-${digitos.slice(meio)}`;
+      }
+    }
+    this.telefoneReivindicacao = texto;
+    (event.target as HTMLIonInputElement).value = texto;
+  }
+
+  async enviarCodigoReivindicacao(): Promise<void> {
+    if (this.enviandoOtp || !this.anuncio) {
+      return;
+    }
+    if (this.telefoneReivindicacao.replace(/\D/g, '').length < 10) {
+      await this.avisar('Informe o WhatsApp com DDD.', 'warning');
+      return;
+    }
+    await this.comLoading('Enviando código...', async () => {
+      await this.auth.enviarOtpCadastroOuReivindicar(this.telefoneReivindicacao, this.anuncio!.id);
+      this.atualizar(() => {
+        this.etapaReivindicacao = 'codigo';
+        this.codigoReivindicacao = '';
+      });
+      await this.avisar('Enviamos o código para o seu WhatsApp.', 'success');
+    });
+  }
+
+  async confirmarReivindicacao(): Promise<void> {
+    if (this.enviandoOtp || !this.anuncio) {
+      return;
+    }
+    if (!/^\d{6}$/.test(this.codigoReivindicacao)) {
+      await this.avisar('Digite os 6 números do código.', 'warning');
+      return;
+    }
+    await this.comLoading('Confirmando código...', async () => {
+      const atualizado = await this.anunciosApi.reivindicar(
+        this.anuncio!.id,
+        this.telefoneReivindicacao,
+        this.codigoReivindicacao
+      );
+      this.atualizar(() => {
+        this.anuncio = atualizado;
+        this.ficha = this.montarFicha(atualizado);
+        this.modalReivindicacao = false;
+      });
+      await this.avisar('Anúncio reivindicado. Baixe o app para editar.', 'success');
+    });
+  }
+
+  private idDaRota(): number {
+    let rota: ActivatedRoute | null = this.route;
+    while (rota) {
+      const id = rota.snapshot.paramMap.get('id');
+      if (id) {
+        return Number(id);
+      }
+      rota = rota.parent;
+    }
+    return 0;
+  }
+
+  private tokenDaRota(): string | null {
+    let rota: ActivatedRoute | null = this.route;
+    while (rota) {
+      const token = rota.snapshot.queryParamMap.get('token');
+      if (token) {
+        return token;
+      }
+      rota = rota.parent;
+    }
+    return null;
+  }
+
+  private async perguntarMarcarVendido(): Promise<void> {
+    if (this.perguntouVendido || !this.anuncio) {
+      return;
+    }
+    this.perguntouVendido = true;
+    if (this.loteVendido) {
+      await this.avisar('Este lote já está marcado como vendido.', 'warning');
+      return;
+    }
+    const alerta = await this.alertCtrl.create({
+      header: 'Marcar como vendido',
+      message: 'O lote sai da vitrine e o botão de contato é desligado.',
+      buttons: [
+        { text: 'Agora não', role: 'cancel' },
+        { text: 'Marcar como vendido', handler: () => void this.confirmarVendido() },
+      ],
+    });
+    await alerta.present();
+  }
+
+  private async confirmarVendido(): Promise<void> {
+    if (!this.anuncio) {
+      return;
+    }
+    try {
+      const atualizado = await this.anunciosApi.marcarVendido(this.anuncio.id, this.tokenVendido);
+      this.atualizar(() => {
+        this.anuncio = atualizado;
+        this.ficha = this.montarFicha(atualizado);
+      });
+      await this.avisar('Lote marcado como vendido.', 'success');
+    } catch {
+      await this.avisar('Não foi possível marcar o lote como vendido.', 'danger');
+    }
   }
 
   usarPlaceholder(event: Event): void {
@@ -178,6 +349,36 @@ export class AnuncioDetalhePage {
       mudanca();
       this.cdr.detectChanges();
     });
+  }
+
+  private async comLoading(mensagem: string, acao: () => Promise<void>): Promise<void> {
+    this.enviandoOtp = true;
+    const loading = await this.loadingCtrl.create({
+      message: mensagem,
+      spinner: 'crescent',
+      backdropDismiss: false,
+    });
+    await loading.present();
+    try {
+      await acao();
+    } catch (erro) {
+      const status = erro instanceof HttpErrorResponse ? erro.status : 0;
+      const mensagens: Record<number, string> = {
+        400: 'Código ou WhatsApp não confere com este anúncio.',
+        404: 'Não encontramos este anúncio.',
+        409: 'Este anúncio já foi reivindicado.',
+        410: 'Este código expirou ou foi bloqueado. Peça um novo.',
+        429: 'Você pediu códigos demais. Aguarde um pouco e tente de novo.',
+      };
+      await this.avisar(
+        mensagens[status] ?? 'Não foi possível concluir agora. Tente de novo.',
+        status === 429 ? 'warning' : 'danger'
+      );
+    } finally {
+      this.enviandoOtp = false;
+      await loading.dismiss();
+      this.cdr.detectChanges();
+    }
   }
 
   private async avisar(message: string, color: string): Promise<void> {

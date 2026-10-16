@@ -6,6 +6,7 @@ import br.com.appcompregado.domain.enums.AnuncioStatus;
 import br.com.appcompregado.domain.enums.Aptidao;
 import br.com.appcompregado.domain.enums.CategoriaAnimal;
 import br.com.appcompregado.domain.enums.Raca;
+import br.com.appcompregado.domain.enums.StatusProcessamento;
 import br.com.appcompregado.repository.AnuncioBusca;
 import br.com.appcompregado.repository.AnuncioRepository;
 import br.com.appcompregado.repository.UsuarioRepository;
@@ -33,16 +34,22 @@ public class AnuncioService {
     private final AnuncioRepository anuncioRepository;
     private final UsuarioRepository usuarioRepository;
     private final ArmazenamentoLocalService armazenamento;
+    private final AlertaNotificador radar;
+    private final VendidoToken vendidoToken;
     private final int limiteAnunciosGratis;
 
     public AnuncioService(
             AnuncioRepository anuncioRepository,
             UsuarioRepository usuarioRepository,
             ArmazenamentoLocalService armazenamento,
+            AlertaNotificador radar,
+            VendidoToken vendidoToken,
             @Value("${compregado.limite.anuncios.gratis}") int limiteAnunciosGratis) {
         this.anuncioRepository = anuncioRepository;
         this.usuarioRepository = usuarioRepository;
         this.armazenamento = armazenamento;
+        this.radar = radar;
+        this.vendidoToken = vendidoToken;
         this.limiteAnunciosGratis = limiteAnunciosGratis;
     }
 
@@ -102,8 +109,13 @@ public class AnuncioService {
         Anuncio anuncio = new Anuncio();
         preencher(anuncio, request);
         anuncio.getFotos().addAll(salvas);
+        anuncio.setUrlFotoPrincipal(salvas.get(0));
+        anuncio.setStatusProcessamento(StatusProcessamento.PUBLICADO);
+        anuncio.setReivindicado(true);
         anuncio.setVendedor(vendedor);
-        return AnuncioResponse.from(anuncioRepository.saveAndFlush(anuncio));
+        anuncio = anuncioRepository.saveAndFlush(anuncio);
+        radar.agendar(anuncio);
+        return AnuncioResponse.from(anuncio);
     }
 
     @Transactional
@@ -130,6 +142,13 @@ public class AnuncioService {
         anuncio.getFotos().clear();
         anuncio.getFotos().addAll(mantidas);
         anuncio.getFotos().addAll(salvas);
+        if (!anuncio.getFotos().isEmpty()) {
+            anuncio.setUrlFotoPrincipal(anuncio.getFotos().get(0));
+            if (anuncio.getStatusProcessamento() == StatusProcessamento.RASCUNHO_SEM_FOTO) {
+                anuncio.setStatusProcessamento(StatusProcessamento.PUBLICADO);
+                anuncio.setAtivo(anuncio.getStatus() != AnuncioStatus.VENDIDO);
+            }
+        }
         return AnuncioResponse.from(anuncioRepository.saveAndFlush(anuncio));
     }
 
@@ -148,6 +167,22 @@ public class AnuncioService {
             verificarLimiteGratis(usuario);
         }
         anuncio.setStatus(status);
+        anuncio.setAtivo(status != AnuncioStatus.VENDIDO);
+        return AnuncioResponse.from(anuncio);
+    }
+
+    /** Dono logado ou o link assinado que o Chip 3 mandou no lembrete de 15 dias. */
+    @Transactional
+    public AnuncioResponse marcarVendido(Long id, Usuario logado, String token) {
+        Anuncio anuncio = carregar(id);
+        boolean dono = logado != null
+                && anuncio.getVendedor() != null
+                && anuncio.getVendedor().getId().equals(logado.getId());
+        if (!dono && !vendidoToken.confere(id, token)) {
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Não foi possível confirmar este lote.");
+        }
+        anuncio.setStatus(AnuncioStatus.VENDIDO);
+        anuncio.setAtivo(false);
         return AnuncioResponse.from(anuncio);
     }
 
@@ -176,7 +211,11 @@ public class AnuncioService {
         if (anuncio.getStatus() == AnuncioStatus.PAUSADO) {
             throw new ResponseStatusException(HttpStatus.CONFLICT, "Este anúncio está pausado.");
         }
-        String whatsapp = anuncio.getVendedor().getWhatsapp();
+        String whatsapp = anuncio.getTelefoneVendedorOriginal();
+        if (whatsapp == null || whatsapp.isBlank()) {
+            whatsapp = anuncio.getVendedor().getWhatsapp();
+        }
+        whatsapp = PhoneUtils.normalizar(whatsapp);
         // Cidade no texto: quem tem vários anúncios identifica o lote sem precisar perguntar.
         String mensagem = "Olá! Vi no CompreGado o seu anúncio \"" + anuncio.getTitulo() + "\" ("
                 + anuncio.getCidade() + ") e tenho interesse. Ainda está disponível?";

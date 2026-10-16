@@ -28,14 +28,24 @@ public class WhatsappBotService {
         this.simulador = simulador;
     }
 
-    /** @param whatsapp número do cadastro (DDD + número) ou JID do WhatsApp; o DDI 55 é acrescentado. */
+    /** Chip padrão já configurado em app.whatsapp (bot-url / bot-instancia). */
     public void enviar(String whatsapp, String mensagem) {
+        enviarNaInstancia(
+                propriedades.getBotUrl(), propriedades.getBotToken(), propriedades.getBotInstancia(), whatsapp, mensagem);
+    }
+
+    /**
+     * @param urlBase URL da Evolution, sem barra no fim
+     * @param whatsapp número do cadastro (DDD + número) ou JID; o DDI 55 é acrescentado
+     */
+    public void enviarNaInstancia(
+            String urlBase, String apiKey, String instancia, String whatsapp, String mensagem) {
         String numero = "55" + TelefoneBr.nacional(whatsapp);
-        if (!propriedades.getBotUrl().isBlank()) {
+        if (urlBase != null && !urlBase.isBlank()) {
             try {
                 http.post()
-                        .uri(propriedades.getBotUrl() + "/message/sendText/{instancia}", propriedades.getBotInstancia())
-                        .header("apikey", propriedades.getBotToken())
+                        .uri(urlBase + "/message/sendText/{instancia}", instancia)
+                        .header("apikey", apiKey == null ? "" : apiKey)
                         .contentType(MediaType.APPLICATION_JSON)
                         .body(Map.of("number", numero, "text", mensagem))
                         .retrieve()

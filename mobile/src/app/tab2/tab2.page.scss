@@ -80,5 +80,23 @@
 .vazio {
   text-align: center;
   color: var(--ion-color-medium);
-  padding: 24px;
+  padding: 24px 24px 8px;
+}
+
+.radar-card {
+  margin: 8px 16px 24px;
+  padding: 16px;
+  border-radius: 16px;
+  background: var(--ion-color-card, #1e1e1e);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+
+  p {
+    margin: 0 0 12px;
+  }
+}
+
+.radar-titulo {
+  font-size: 1.15rem;
+  font-weight: 700;
+  color: var(--ion-text-color);
 }

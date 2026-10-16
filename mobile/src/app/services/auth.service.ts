@@ -59,8 +59,21 @@ export class AuthService {
   esqueciSenha(whatsapp: string): Promise<{ expiraEmSegundos: number; reenviarEmSegundos: number }> {
     return firstValueFrom(
       this.http.post<{ expiraEmSegundos: number; reenviarEmSegundos: number }>(
-        `${environment.apiUrl}/api/auth/esqueci-senha`,
+        `${environment.apiUrl}/api/auth/otp/recuperar-senha`,
         { whatsapp }
+      )
+    );
+  }
+
+  /** Código de 6 dígitos do Chip 1 para reivindicar um lote capturado ou iniciar o cadastro. */
+  enviarOtpCadastroOuReivindicar(
+    whatsapp: string,
+    anuncioId?: number
+  ): Promise<{ expiraEmSegundos: number; reenviarEmSegundos: number }> {
+    return firstValueFrom(
+      this.http.post<{ expiraEmSegundos: number; reenviarEmSegundos: number }>(
+        `${environment.apiUrl}/api/auth/otp/cadastro-ou-reivindicar`,
+        { whatsapp, anuncioId: anuncioId ?? null }
       )
     );
   }

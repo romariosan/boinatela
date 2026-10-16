@@ -5,11 +5,14 @@ import br.com.appcompregado.domain.enums.Aptidao;
 import br.com.appcompregado.domain.enums.CategoriaAnimal;
 import br.com.appcompregado.domain.enums.Raca;
 import br.com.appcompregado.service.AnuncioService;
+import br.com.appcompregado.service.InteracaoContatoService;
 import br.com.appcompregado.service.LimiteAnunciosAtingidoException;
+import br.com.appcompregado.service.ReivindicacaoService;
 import br.com.appcompregado.web.dto.AnuncioRequest;
 import br.com.appcompregado.web.dto.AnuncioResponse;
 import br.com.appcompregado.web.dto.CategoriaEstoqueResponse;
 import br.com.appcompregado.web.dto.ContatoResponse;
+import br.com.appcompregado.web.dto.ReivindicarRequest;
 import br.com.appcompregado.web.dto.StatusRequest;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -45,11 +48,20 @@ import org.springframework.web.server.ResponseStatusException;
 public class AnuncioController {
 
     private final AnuncioService anuncioService;
+    private final ReivindicacaoService reivindicacao;
+    private final InteracaoContatoService interacao;
     private final ObjectMapper objectMapper;
     private final Validator validator;
 
-    public AnuncioController(AnuncioService anuncioService, ObjectMapper objectMapper, Validator validator) {
+    public AnuncioController(
+            AnuncioService anuncioService,
+            ReivindicacaoService reivindicacao,
+            InteracaoContatoService interacao,
+            ObjectMapper objectMapper,
+            Validator validator) {
         this.anuncioService = anuncioService;
+        this.reivindicacao = reivindicacao;
+        this.interacao = interacao;
         this.objectMapper = objectMapper;
         this.validator = validator;
     }
@@ -73,6 +85,25 @@ public class AnuncioController {
     @GetMapping("/anuncios/{id}")
     public AnuncioResponse buscar(@PathVariable Long id) {
         return anuncioService.buscarPorId(id);
+    }
+
+    @PostMapping("/anuncios/{id}/reivindicar")
+    public AnuncioResponse reivindicar(@PathVariable Long id, @Valid @RequestBody ReivindicarRequest request) {
+        return reivindicacao.reivindicar(id, request.whatsapp(), request.otp());
+    }
+
+    @PostMapping("/anuncios/{id}/registrar-intere-contato")
+    @ResponseStatus(HttpStatus.NO_CONTENT)
+    public void registrarInteresse(@PathVariable Long id) {
+        interacao.registrar(id);
+    }
+
+    @PutMapping("/anuncios/{id}/marcar-vendido")
+    public AnuncioResponse marcarVendido(
+            @PathVariable Long id,
+            @RequestParam(required = false) String token,
+            @AuthenticationPrincipal Usuario usuario) {
+        return anuncioService.marcarVendido(id, usuario, token);
     }
 
     @GetMapping("/categorias")

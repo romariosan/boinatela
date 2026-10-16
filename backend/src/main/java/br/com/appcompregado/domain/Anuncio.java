@@ -4,6 +4,7 @@ import br.com.appcompregado.domain.enums.AnuncioStatus;
 import br.com.appcompregado.domain.enums.Aptidao;
 import br.com.appcompregado.domain.enums.CategoriaAnimal;
 import br.com.appcompregado.domain.enums.Raca;
+import br.com.appcompregado.domain.enums.StatusProcessamento;
 import br.com.appcompregado.domain.enums.TipoVenda;
 import jakarta.persistence.CollectionTable;
 import jakarta.persistence.Column;
@@ -22,6 +23,7 @@ import jakarta.persistence.PrePersist;
 import jakarta.persistence.Table;
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
+import java.util.Locale;
 import java.util.ArrayList;
 import java.util.List;
 import org.hibernate.annotations.BatchSize;
@@ -44,8 +46,21 @@ public class Anuncio {
     @Column(nullable = false, precision = 14, scale = 2)
     private BigDecimal preco;
 
+    /** Padrão "Cidade - UF", para a busca que já filtra pelo sufixo. A UF também fica na coluna uf. */
     @Column(nullable = false)
     private String cidade;
+
+    @Column(length = 2)
+    private String uf;
+
+    /** Capa. Nos lotes do app coincide com a primeira de fotos. */
+    @Column(length = 500)
+    private String urlFotoPrincipal;
+
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false, length = 30)
+    @ColumnDefault("'PUBLICADO'")
+    private StatusProcessamento statusProcessamento = StatusProcessamento.PUBLICADO;
 
     // A ordem importa: a primeira foto é a capa do anúncio.
     @ElementCollection
@@ -89,6 +104,43 @@ public class Anuncio {
      */
     @Column(updatable = false)
     private LocalDateTime dataCriacao;
+
+    /** WhatsApp de quem publicou no grupo, já normalizado. Nulo nos anúncios criados no app. */
+    @Column(length = 20)
+    private String telefoneVendedorOriginal;
+
+    /** WHATSAPP no grupo. FACEBOOK quando a curadoria cola o anúncio com a tag FB:. */
+    @Column(nullable = false, length = 20)
+    @ColumnDefault("'WHATSAPP'")
+    private String origem = "WHATSAPP";
+
+    /** O dono confirmou o lote pelo código enviado no WhatsApp. */
+    @Column(nullable = false)
+    @ColumnDefault("false")
+    private boolean reivindicado = false;
+
+    /** Quando o Chip 2 gravou o anúncio. Nulo = publicado pelo app, não pela escuta. */
+    private LocalDateTime dataCaptura;
+
+    @Column(nullable = false)
+    @ColumnDefault("false")
+    private boolean mensagemConsultorEnviada = false;
+
+    private LocalDateTime dataAbordagemConsultor;
+
+    /** Já mandamos o lembrete de 15 dias perguntando se o lote foi vendido. */
+    @Column(nullable = false)
+    @ColumnDefault("false")
+    private boolean mensagemRetencaoEnviada = false;
+
+    @Column(nullable = false)
+    @ColumnDefault("0")
+    private int quantidadeCliquesContato = 0;
+
+    /** false quando o lote sai de circulação (vendido). Não é o status PAUSADO. */
+    @Column(nullable = false)
+    @ColumnDefault("true")
+    private boolean ativo = true;
 
     @ManyToOne(fetch = FetchType.LAZY, optional = false)
     @JoinColumn(name = "fk_vendedor", nullable = false)
@@ -139,6 +191,45 @@ public class Anuncio {
 
     public void setCidade(String cidade) {
         this.cidade = cidade;
+        if (cidade != null && cidade.length() >= 5) {
+            int corte = cidade.length() - 5;
+            if (cidade.regionMatches(true, corte, " - ", 0, 3)) {
+                String sigla = cidade.substring(cidade.length() - 2);
+                if (sigla.chars().allMatch(Character::isLetter)) {
+                    this.uf = sigla.toUpperCase(Locale.ROOT);
+                }
+            }
+        }
+    }
+
+    public String getUf() {
+        return uf;
+    }
+
+    public void setUf(String uf) {
+        this.uf = uf == null ? null : uf.trim().toUpperCase(Locale.ROOT);
+    }
+
+    public String getUrlFotoPrincipal() {
+        return urlFotoPrincipal;
+    }
+
+    public void setUrlFotoPrincipal(String urlFotoPrincipal) {
+        this.urlFotoPrincipal = urlFotoPrincipal;
+    }
+
+    public StatusProcessamento getStatusProcessamento() {
+        return statusProcessamento;
+    }
+
+    public void setStatusProcessamento(StatusProcessamento statusProcessamento) {
+        this.statusProcessamento = statusProcessamento;
+    }
+
+    public boolean publicadoNaVitrine() {
+        return ativo
+                && status == AnuncioStatus.ATIVO
+                && statusProcessamento != StatusProcessamento.RASCUNHO_SEM_FOTO;
     }
 
     public List<String> getFotos() {
@@ -219,5 +310,82 @@ public class Anuncio {
 
     public void setVendedor(Usuario vendedor) {
         this.vendedor = vendedor;
+    }
+
+    public String getTelefoneVendedorOriginal() {
+        return telefoneVendedorOriginal;
+    }
+
+    public void setTelefoneVendedorOriginal(String telefoneVendedorOriginal) {
+        this.telefoneVendedorOriginal = telefoneVendedorOriginal;
+    }
+
+    public String getOrigem() {
+        return origem;
+    }
+
+    public void setOrigem(String origem) {
+        this.origem = origem == null || origem.isBlank() ? "WHATSAPP" : origem.trim().toUpperCase(Locale.ROOT);
+    }
+
+    public boolean isReivindicado() {
+        return reivindicado;
+    }
+
+    public void setReivindicado(boolean reivindicado) {
+        this.reivindicado = reivindicado;
+    }
+
+    public LocalDateTime getDataCaptura() {
+        return dataCaptura;
+    }
+
+    public void setDataCaptura(LocalDateTime dataCaptura) {
+        this.dataCaptura = dataCaptura;
+    }
+
+    public boolean isMensagemConsultorEnviada() {
+        return mensagemConsultorEnviada;
+    }
+
+    public void setMensagemConsultorEnviada(boolean mensagemConsultorEnviada) {
+        this.mensagemConsultorEnviada = mensagemConsultorEnviada;
+    }
+
+    public LocalDateTime getDataAbordagemConsultor() {
+        return dataAbordagemConsultor;
+    }
+
+    public void setDataAbordagemConsultor(LocalDateTime dataAbordagemConsultor) {
+        this.dataAbordagemConsultor = dataAbordagemConsultor;
+    }
+
+    public boolean isMensagemRetencaoEnviada() {
+        return mensagemRetencaoEnviada;
+    }
+
+    public void setMensagemRetencaoEnviada(boolean mensagemRetencaoEnviada) {
+        this.mensagemRetencaoEnviada = mensagemRetencaoEnviada;
+    }
+
+    public int getQuantidadeCliquesContato() {
+        return quantidadeCliquesContato;
+    }
+
+    public void setQuantidadeCliquesContato(int quantidadeCliquesContato) {
+        this.quantidadeCliquesContato = quantidadeCliquesContato;
+    }
+
+    public boolean isAtivo() {
+        return ativo;
+    }
+
+    public void setAtivo(boolean ativo) {
+        this.ativo = ativo;
+    }
+
+    /** Página pública do lote, sem login. */
+    public String getLinkWeb() {
+        return LinksDoSite.baseUrl() + "/lote/" + id;
     }
 }

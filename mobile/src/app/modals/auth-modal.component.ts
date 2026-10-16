@@ -1,6 +1,6 @@
 import { HttpErrorResponse } from '@angular/common/http';
 import { ChangeDetectorRef, Component, NgZone, OnDestroy } from '@angular/core';
-import { ModalController, ToastController } from '@ionic/angular/lazy';
+import { LoadingController, ModalController, ToastController } from '@ionic/angular/lazy';
 import { environment } from '../../environments/environment';
 import { AuthService, MINIMO_SENHA } from '../services/auth.service';
 import { VerificacaoService } from '../services/verificacao.service';
@@ -43,6 +43,7 @@ export class AuthModalComponent implements OnDestroy {
     private readonly auth: AuthService,
     private readonly verificacao: VerificacaoService,
     private readonly toastCtrl: ToastController,
+    private readonly loadingCtrl: LoadingController,
     private readonly zone: NgZone,
     private readonly cdr: ChangeDetectorRef
   ) {}
@@ -163,6 +164,12 @@ export class AuthModalComponent implements OnDestroy {
       return;
     }
     this.carregando = true;
+    const loading = await this.loadingCtrl.create({
+      message: 'Enviando código...',
+      spinner: 'crescent',
+      backdropDismiss: false,
+    });
+    await loading.present();
     try {
       const resposta = await this.auth.esqueciSenha(this.whatsapp);
       this.atualizar(() => {
@@ -184,6 +191,7 @@ export class AuthModalComponent implements OnDestroy {
       );
     } finally {
       this.atualizar(() => (this.carregando = false));
+      await loading.dismiss();
     }
   }
 

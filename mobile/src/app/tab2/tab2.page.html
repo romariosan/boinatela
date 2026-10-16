@@ -20,6 +20,26 @@
 
     <ion-grid class="filtros">
       <ion-row>
+        <ion-col size="12">
+          <ion-select
+            aria-label="Cidade em Goiás"
+            fill="outline"
+            interface="action-sheet"
+            [interfaceOptions]="{ header: 'Cidades de Goiás' }"
+            cancelText="Cancelar"
+            okText="Confirmar"
+            placeholder="Todas as Cidades (GO)"
+            [value]="cidadeGo"
+            (ionChange)="aoMudarCidadeGo($event)"
+          >
+            <ion-select-option value="">Todas as Cidades (GO)</ion-select-option>
+            <ion-select-option *ngFor="let item of cidadesGo" [value]="item">
+              {{ nomeCidade(item) }}
+            </ion-select-option>
+          </ion-select>
+        </ion-col>
+      </ion-row>
+      <ion-row>
         <ion-col size="4">
           <ion-select
             aria-label="Animal"
@@ -85,7 +105,53 @@
     ></app-anuncio-card>
   </div>
 
-  <p class="vazio" *ngIf="buscou && !carregando && anuncios.length === 0">
-    Nenhum anúncio encontrado. Tente outra palavra ou troque os filtros.
-  </p>
+  <section class="radar" *ngIf="buscou && !carregando && anuncios.length === 0">
+    <p class="vazio">Nenhum anúncio encontrado. Tente outra palavra ou troque os filtros.</p>
+    <div class="radar-card">
+      <p class="radar-titulo">🐮 Não encontrou o gado que procura?</p>
+      <p>
+        Ative nosso Radar! Avisamos no seu WhatsApp assim que um produtor postar este perfil de lote em
+        Formosa e região.
+      </p>
+      <ion-button expand="block" class="botao-whatsapp" (click)="abrirRadar()">
+        Ativar Alerta Grátis
+      </ion-button>
+    </div>
+  </section>
 </ion-content>
+
+<ion-modal [isOpen]="modalRadar" (didDismiss)="modalRadar = false">
+  <ng-template>
+    <ion-header>
+      <ion-toolbar color="primary">
+        <ion-title>Radar de demanda</ion-title>
+        <ion-buttons slot="end">
+          <ion-button (click)="fecharRadar()" [disabled]="enviandoAlerta">Fechar</ion-button>
+        </ion-buttons>
+      </ion-toolbar>
+    </ion-header>
+    <ion-content class="ion-padding">
+      <p>Informe o WhatsApp que deve receber o aviso quando este perfil aparecer.</p>
+      <ion-input
+        fill="outline"
+        label="WhatsApp com DDD"
+        labelPlacement="stacked"
+        type="tel"
+        inputmode="numeric"
+        autocomplete="tel-national"
+        [value]="whatsappRadar"
+        (ionInput)="aoDigitarWhatsappRadar($event)"
+        placeholder="(61) 99999-9999"
+      ></ion-input>
+      <ion-button
+        expand="block"
+        class="ion-margin-top botao-whatsapp"
+        [disabled]="enviandoAlerta"
+        (click)="confirmarRadar()"
+      >
+        <ion-spinner *ngIf="enviandoAlerta" slot="start" name="crescent"></ion-spinner>
+        {{ enviandoAlerta ? 'Ativando...' : 'Confirmar alerta' }}
+      </ion-button>
+    </ion-content>
+  </ng-template>
+</ion-modal>

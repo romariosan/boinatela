@@ -5,6 +5,7 @@ import br.com.appcompregado.domain.enums.AnuncioStatus;
 import br.com.appcompregado.domain.enums.Aptidao;
 import br.com.appcompregado.domain.enums.CategoriaAnimal;
 import br.com.appcompregado.domain.enums.Raca;
+import br.com.appcompregado.domain.enums.StatusProcessamento;
 import jakarta.persistence.criteria.CriteriaBuilder;
 import jakarta.persistence.criteria.JoinType;
 import jakarta.persistence.criteria.Predicate;
@@ -37,6 +38,8 @@ public final class AnuncioBusca {
             }
             List<Predicate> filtros = new ArrayList<>();
             filtros.add(cb.equal(root.get("status"), AnuncioStatus.ATIVO));
+            filtros.add(cb.isTrue(root.get("ativo")));
+            filtros.add(cb.notEqual(root.get("statusProcessamento"), StatusProcessamento.RASCUNHO_SEM_FOTO));
             for (String termo : termos(q)) {
                 filtros.add(casaComTermo(root, cb, termo));
             }

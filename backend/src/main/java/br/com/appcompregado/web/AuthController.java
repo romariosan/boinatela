@@ -2,6 +2,7 @@ package br.com.appcompregado.web;
 
 import br.com.appcompregado.domain.Usuario;
 import br.com.appcompregado.service.AuthService;
+import br.com.appcompregado.service.OtpCadastroService;
 import br.com.appcompregado.service.RecuperacaoSenhaService;
 import br.com.appcompregado.service.VerificacaoWhatsappService;
 import br.com.appcompregado.web.dto.AuthRequest;
@@ -9,6 +10,7 @@ import br.com.appcompregado.web.dto.AuthResponse;
 import br.com.appcompregado.web.dto.EsqueciSenhaRequest;
 import br.com.appcompregado.web.dto.EsqueciSenhaResponse;
 import br.com.appcompregado.web.dto.LoginRequest;
+import br.com.appcompregado.web.dto.OtpCadastroRequest;
 import br.com.appcompregado.web.dto.RedefinirSenhaRequest;
 import br.com.appcompregado.web.dto.VerificacaoStatusResponse;
 import jakarta.validation.Valid;
@@ -28,14 +30,17 @@ public class AuthController {
     private final AuthService authService;
     private final VerificacaoWhatsappService verificacao;
     private final RecuperacaoSenhaService recuperacao;
+    private final OtpCadastroService otpCadastro;
 
     public AuthController(
             AuthService authService,
             VerificacaoWhatsappService verificacao,
-            RecuperacaoSenhaService recuperacao) {
+            RecuperacaoSenhaService recuperacao,
+            OtpCadastroService otpCadastro) {
         this.authService = authService;
         this.verificacao = verificacao;
         this.recuperacao = recuperacao;
+        this.otpCadastro = otpCadastro;
     }
 
     @PostMapping("/cadastro")
@@ -51,6 +56,18 @@ public class AuthController {
 
     @PostMapping("/esqueci-senha")
     public EsqueciSenhaResponse esqueciSenha(@Valid @RequestBody EsqueciSenhaRequest request) {
+        return recuperacao.solicitar(request.whatsapp());
+    }
+
+    /** Chip 1: código de 6 dígitos para cadastrar ou reivindicar um lote. */
+    @PostMapping("/otp/cadastro-ou-reivindicar")
+    public EsqueciSenhaResponse otpCadastroOuReivindicar(@Valid @RequestBody OtpCadastroRequest request) {
+        return otpCadastro.enviar(request.whatsapp(), request.anuncioId());
+    }
+
+    /** Chip 1: mesmo código de 4 dígitos do esqueci-senha, pelo número do sistema. */
+    @PostMapping("/otp/recuperar-senha")
+    public EsqueciSenhaResponse otpRecuperarSenha(@Valid @RequestBody EsqueciSenhaRequest request) {
         return recuperacao.solicitar(request.whatsapp());
     }
 

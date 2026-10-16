@@ -28,10 +28,15 @@ public class VerificacaoWhatsappService {
 
     private final UsuarioRepository usuarioRepository;
     private final WhatsappProperties propriedades;
+    private final ReivindicacaoService reivindicacao;
 
-    public VerificacaoWhatsappService(UsuarioRepository usuarioRepository, WhatsappProperties propriedades) {
+    public VerificacaoWhatsappService(
+            UsuarioRepository usuarioRepository,
+            WhatsappProperties propriedades,
+            ReivindicacaoService reivindicacao) {
         this.usuarioRepository = usuarioRepository;
         this.propriedades = propriedades;
+        this.reivindicacao = reivindicacao;
     }
 
     static String gerarCodigo() {
@@ -82,6 +87,7 @@ public class VerificacaoWhatsappService {
         Usuario usuario = dono.get();
         usuario.setTelefoneVerificado(true);
         usuario.setCodigoVerificacao(null);
+        reivindicacao.vincularVerificados(usuario);
         log.info("WhatsApp verificado para o usuário {}.", usuario.getId());
         return true;
     }

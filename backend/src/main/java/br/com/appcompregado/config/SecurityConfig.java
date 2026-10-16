@@ -41,13 +41,19 @@ public class SecurityConfig {
                         .requestMatchers("/error").permitAll()
                         .requestMatchers(HttpMethod.GET, "/api/auth/verificar-status").authenticated()
                         .requestMatchers("/api/auth/**").permitAll()
-                        .requestMatchers(HttpMethod.POST, "/api/webhook/whatsapp", "/api/webhook/evolution").permitAll()
+                        .requestMatchers(HttpMethod.POST,
+                                "/api/webhook/whatsapp",
+                                "/api/webhook/evolution",
+                                "/api/webhook/whatsapp-scraper").permitAll()
                         // Só existe com envio-no-log ligado e só atende a própria máquina (WhatsappSimuladorController).
                         .requestMatchers("/dev/whatsapp", "/dev/whatsapp/**").permitAll()
                         .requestMatchers(HttpMethod.GET, "/api/anuncios/meus").authenticated()
                         .requestMatchers(HttpMethod.GET, "/api/anuncios", "/api/anuncios/*").permitAll()
                         .requestMatchers(HttpMethod.GET, "/api/categorias", "/api/cidades").permitAll()
                         .requestMatchers(HttpMethod.GET, "/uploads/**").permitAll()
+                        .requestMatchers(HttpMethod.POST, "/api/anuncios/*/reivindicar").permitAll()
+                        .requestMatchers(HttpMethod.POST, "/api/alertas").permitAll()
+                        .requestMatchers(HttpMethod.PUT, "/api/anuncios/*/marcar-vendido").permitAll()
                         .requestMatchers(HttpMethod.POST, "/api/anuncios").authenticated()
                         .requestMatchers(HttpMethod.POST, "/api/anuncios/*/contato").authenticated()
                         .requestMatchers(HttpMethod.PUT, "/api/anuncios/*").authenticated()

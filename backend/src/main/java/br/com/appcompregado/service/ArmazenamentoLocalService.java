@@ -60,6 +60,24 @@ public class ArmazenamentoLocalService {
                 .toUriString();
     }
 
+    /** Foto chegando em base64 pelo webhook, sem MultipartFile. */
+    public String salvarBytes(byte[] conteudo, String contentType) {
+        if (conteudo == null || conteudo.length == 0) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Foto vazia.");
+        }
+        String extensao = EXTENSOES.getOrDefault(contentType == null ? "" : contentType, "jpg");
+        String nome = UUID.randomUUID() + "." + extensao;
+        try {
+            Files.write(pasta.resolve(nome), conteudo);
+        } catch (IOException e) {
+            throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, "Falha ao salvar a foto.", e);
+        }
+        return ServletUriComponentsBuilder.fromCurrentContextPath()
+                .path(CAMINHO_PUBLICO)
+                .path(nome)
+                .toUriString();
+    }
+
     private static String extensaoDe(MultipartFile imagem) {
         if (imagem == null || imagem.isEmpty()) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Envie uma foto do animal.");
