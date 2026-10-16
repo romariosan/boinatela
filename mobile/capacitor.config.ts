@@ -10,9 +10,8 @@ const config: CapacitorConfig = {
       launchShowDuration: 2000,
       launchAutoHide: true,
       launchFadeOutDuration: 300,
-      // Creme da marca: mesmo fundo de resources/splash.png e dos ícones (o logo verde/marrom
-      // perde contraste num fundo verde ou escuro).
-      backgroundColor: '#F7F3EA',
+      // Verde escuro opaco do ícone launcher (resources/icon.png e splash.png).
+      backgroundColor: '#0d1f14',
       // Mantém a proporção e nunca amplia nem corta a imagem.
       androidScaleType: 'CENTER_INSIDE',
       showSpinner: false,

@@ -1,6 +1,7 @@
 import { HttpErrorResponse } from '@angular/common/http';
 import { ChangeDetectorRef, Component, ElementRef, NgZone, ViewChild } from '@angular/core';
 import { ActivatedRoute, Router } from '@angular/router';
+import { Capacitor } from '@capacitor/core';
 import { AlertController, LoadingController, ToastController } from '@ionic/angular/lazy';
 import { environment } from '../../environments/environment';
 import type { SwiperContainer } from 'swiper/element';
@@ -88,6 +89,14 @@ export class AnuncioDetalhePage {
   /** Publicado pelo dono no app, ou reivindicado depois da escuta. */
   get loteConfirmado(): boolean {
     return !!this.anuncio && (!!this.anuncio.reivindicado || !this.anuncio.capturado);
+  }
+
+  /** O APK da loja já é o app. O botão só faz sentido no link público /lote. */
+  get mostrarBaixarApp(): boolean {
+    if (Capacitor.isNativePlatform()) {
+      return false;
+    }
+    return !this.router.url.startsWith('/tabs');
   }
 
   async carregar(): Promise<void> {

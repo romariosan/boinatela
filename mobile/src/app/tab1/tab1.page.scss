@@ -1,15 +1,18 @@
 .marca {
   display: inline-flex;
   align-items: center;
-  gap: 10px;
   max-width: 100%;
   vertical-align: middle;
 }
 
-.marca-logo {
-  flex-shrink: 0;
-  height: 28px;
+.header-logo {
+  height: 40px;
   width: auto;
+  object-fit: contain;
+  margin-left: 0;
+  margin-right: 8px;
+  display: block;
+  flex-shrink: 0;
 }
 
 .marca-nome {

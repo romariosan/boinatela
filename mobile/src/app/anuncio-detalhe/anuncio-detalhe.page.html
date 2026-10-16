@@ -119,7 +119,7 @@
         </ion-button>
       </section>
 
-      <section class="reivindicacao" *ngIf="anuncio.reivindicado">
+      <section class="reivindicacao" *ngIf="anuncio.reivindicado && mostrarBaixarApp">
         <ion-button expand="block" class="baixar-app" [href]="googlePlayUrl" target="_blank" rel="noopener">
           <ion-icon slot="start" name="logo-google-playstore"></ion-icon>
           Baixar Aplicativo Oficial
