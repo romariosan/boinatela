@@ -1,3 +1,16 @@
+.marca-auth {
+  display: flex;
+  justify-content: center;
+  margin: 4px 0 18px;
+
+  img {
+    width: 88px;
+    height: 88px;
+    object-fit: contain;
+    object-position: center;
+  }
+}
+
 p {
   color: var(--ion-color-medium);
   margin-top: 0;

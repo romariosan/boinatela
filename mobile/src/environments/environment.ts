@@ -4,11 +4,11 @@
 
 export const environment = {
   production: false,
-  apiUrl: 'http://localhost:8080',
+  apiUrl: 'https://appcompregado.com.br',
   /** Número do bot que recebe o código de verificação (DDI + DDD + número). */
-  whatsappVerificacao: '556199999999',
-  /** API rodando com WHATSAPP_ENVIO_NO_LOG=true: os botões de WhatsApp abrem o simulador em vez do wa.me. */
-  whatsappSimulado: 'http://localhost:8080/dev/whatsapp' as string | null,
+  whatsappVerificacao: '5561994044146',
+  /** Simulador local só existe com a API na máquina. Nos testes contra a VPS o botão abre o wa.me. */
+  whatsappSimulado: null as string | null,
   /** WhatsApp que fecha o plano Vendedor PRO (DDI + DDD + número). Substituir pelo telefone real. */
   whatsappPlanoPro: '5561999999999',
   webBaseUrl: 'https://appcompregado.com.br',

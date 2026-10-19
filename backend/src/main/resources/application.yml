@@ -41,13 +41,13 @@ compregado:
   whatsapp:
     # Chip 1 manda OTP. Chip 2 só escuta grupo. Chip 3 manda a prospecção.
     system:
-      number: ${COMPREGADO_WHATSAPP_SYSTEM_NUMBER:5561999999991}
+      number: ${COMPREGADO_WHATSAPP_SYSTEM_NUMBER:5561994044146}
       instance: ${COMPREGADO_WHATSAPP_SYSTEM_INSTANCE:compregado-system}
     scraper:
-      number: ${COMPREGADO_WHATSAPP_SCRAPER_NUMBER:5561999999992}
+      number: ${COMPREGADO_WHATSAPP_SCRAPER_NUMBER:5561994044146}
       instance: ${COMPREGADO_WHATSAPP_SCRAPER_INSTANCE:compregado-scraper}
     consultant:
-      number: ${COMPREGADO_WHATSAPP_CONSULTANT_NUMBER:5561999999993}
+      number: ${COMPREGADO_WHATSAPP_CONSULTANT_NUMBER:5561994044146}
       instance: ${COMPREGADO_WHATSAPP_CONSULTANT_INSTANCE:compregado-consultant}
   consultor:
     # A cada minuto, pega o que completou 30 minutos. "-" desliga.

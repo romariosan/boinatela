@@ -1,0 +1,120 @@
+<ion-content class="lp" [scrollY]="true">
+  <header class="topo">
+    <a class="marca" routerLink="/" aria-label="CompreGado — início">
+      <img src="assets/icon/logo.png" alt="" width="44" height="44" />
+      <span>CompreGado</span>
+    </a>
+    <nav class="nav" aria-label="Principal">
+      <a class="so-largo" href="#destaques">Destaques</a>
+      <a class="so-largo" href="#como-funciona">Como funciona</a>
+      <a routerLink="/app">Web App</a>
+    </nav>
+  </header>
+
+  <main>
+    <section class="hero" aria-labelledby="hero-titulo">
+      <div class="hero-texto">
+        <p class="selo">Goiás e regiões do DF</p>
+        <h1 id="hero-titulo">O gado de Goiás e das regiões do DF, direto com quem cria.</h1>
+        <p class="apoio">
+          Bezerros, garrotes, vacas e touros de Goiás e das regiões do DF. Você vê o lote, chama o
+          vendedor no WhatsApp e fecha sem intermediário e sem comissão.
+        </p>
+        <div class="ctas">
+          <a class="botao botao-app" routerLink="/app">Acessar Web App de Anúncios</a>
+          <a class="botao botao-play" [href]="playUrl" target="_blank" rel="noopener noreferrer">
+            Baixar na Google Play Store
+          </a>
+        </div>
+      </div>
+
+      <div class="telefone" aria-hidden="true">
+        <div class="telefone-tela">
+          <p class="tela-topo">Vitrine</p>
+          <article class="card">
+            <span class="card-foto"></span>
+            <strong>12 bezerros Nelore</strong>
+            <span>Brasília - DF</span>
+            <b>R$ 2.850 / cab</b>
+          </article>
+          <article class="card">
+            <span class="card-foto card-foto-2"></span>
+            <strong>Garrotes para engorda</strong>
+            <span>Planaltina - GO</span>
+            <b>R$ 18,40 / kg</b>
+          </article>
+          <article class="card">
+            <span class="card-foto card-foto-3"></span>
+            <strong>Vacas Girolando</strong>
+            <span>Brasília - DF</span>
+            <b>R$ 6.200 / cab</b>
+          </article>
+        </div>
+      </div>
+    </section>
+
+    <section id="destaques" class="secao" aria-labelledby="destaques-titulo">
+      <h2 id="destaques-titulo">Compra e venda sem atravessador</h2>
+      <ul class="grade">
+        <li>
+          <h3>Sem intermediário</h3>
+          <p>O anúncio é do produtor. O contato sai direto para o WhatsApp de quem está vendendo.</p>
+        </li>
+        <li>
+          <h3>Transparência</h3>
+          <p>Categoria, quantidade, peso e cidade aparecem no card, antes de você chamar o vendedor.</p>
+        </li>
+        <li>
+          <h3>Taxa zero</h3>
+          <p>Anunciar é grátis. O CompreGado não cobra comissão sobre o lote.</p>
+        </li>
+      </ul>
+    </section>
+
+    <section id="como-funciona" class="secao passos" aria-labelledby="passos-titulo">
+      <h2 id="passos-titulo">Como funciona</h2>
+      <ol>
+        <li>
+          <span>1</span>
+          <div>
+            <h3>Encontre o lote</h3>
+            <p>Abra a vitrine e filtre por bezerro, garrote, vaca ou touro em Goiás e nas regiões do DF.</p>
+          </div>
+        </li>
+        <li>
+          <span>2</span>
+          <div>
+            <h3>Fale direto com o vendedor</h3>
+            <p>O botão abre o WhatsApp com a mensagem do lote já escrita.</p>
+          </div>
+        </li>
+        <li>
+          <span>3</span>
+          <div>
+            <h3>Anuncie grátis</h3>
+            <p>Publique o seu gado em poucos toques. Sem cartão e sem comissão.</p>
+          </div>
+        </li>
+      </ol>
+    </section>
+  </main>
+
+  <footer class="rodape">
+    <div class="rodape-marca">
+      <img src="assets/icon/logo.png" alt="" width="40" height="40" />
+      <strong>CompreGado</strong>
+      <p>Brasília - DF</p>
+    </div>
+    <div class="ctas">
+      <a class="botao botao-app" routerLink="/app">Acessar Web App de Anúncios</a>
+      <a class="botao botao-play" [href]="playUrl" target="_blank" rel="noopener noreferrer">
+        Baixar na Google Play Store
+      </a>
+    </div>
+    <address>
+      <a href="mailto:compregado@appcompregado.com.br">{{ email }}</a>
+      <a routerLink="/politica-de-privacidade">Política de Privacidade</a>
+      <span>Goiás e regiões do DF</span>
+    </address>
+  </footer>
+</ion-content>

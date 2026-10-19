@@ -3,21 +3,21 @@
      em hex, e não color-mix(), porque o Ionic também precisa da versão -rgb e WebViews antigas
      do Android não suportam color-mix(). */
 
-  /* Verde CompreGado (Marca/Cabeçalhos/Estrutura) */
-  --ion-color-primary: #1f4931;
-  --ion-color-primary-rgb: 31, 73, 49;
+  /* Verde musgo do ícone novo (cabeçalhos e estrutura). */
+  --ion-color-primary: #1c3829;
+  --ion-color-primary-rgb: 28, 56, 41;
   --ion-color-primary-contrast: #ffffff;
   --ion-color-primary-contrast-rgb: 255, 255, 255;
-  --ion-color-primary-shade: #1b402b;
-  --ion-color-primary-tint: #355b46;
+  --ion-color-primary-shade: #193124;
+  --ion-color-primary-tint: #334c3e;
 
-  /* Marrom Terra (carrinho e "Gado" do logo; detalhes e ações secundárias da marca) */
-  --ion-color-secondary: #71502f;
-  --ion-color-secondary-rgb: 113, 80, 47;
-  --ion-color-secondary-contrast: #ffffff;
-  --ion-color-secondary-contrast-rgb: 255, 255, 255;
-  --ion-color-secondary-shade: #634629;
-  --ion-color-secondary-tint: #7f6244;
+  /* Laranja da logo. Texto escuro: branco sobre #d06818 fica abaixo do contraste mínimo. */
+  --ion-color-secondary: #d06818;
+  --ion-color-secondary-rgb: 208, 104, 24;
+  --ion-color-secondary-contrast: #111111;
+  --ion-color-secondary-contrast-rgb: 17, 17, 17;
+  --ion-color-secondary-shade: #b75b15;
+  --ion-color-secondary-tint: #d5772f;
 
   /* Verde Vibrante (Preços, Badges e Destaques Financeiros) */
   --ion-color-success: #22c55e;

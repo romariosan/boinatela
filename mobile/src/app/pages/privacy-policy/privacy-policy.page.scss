@@ -1,0 +1,110 @@
+:host {
+  --verde: #2e7d32;
+  --laranja: #e65100;
+  --chumbo: #263238;
+}
+
+.privacidade {
+  --background: #f6f3ee;
+  --color: var(--chumbo);
+  color: var(--chumbo);
+  font-family: "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+}
+
+.topo {
+  position: sticky;
+  top: 0;
+  z-index: 2;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 12px 8vw;
+  background: rgba(246, 243, 238, 0.94);
+  border-bottom: 3px solid var(--verde);
+}
+
+.marca {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  color: var(--chumbo);
+  font-weight: 800;
+  text-decoration: none;
+}
+
+.marca img {
+  width: 44px;
+  height: 44px;
+  object-fit: contain;
+}
+
+.topo > a {
+  color: var(--verde);
+  font-weight: 700;
+  text-decoration: none;
+}
+
+article {
+  max-width: 42rem;
+  margin: 0 auto;
+  padding: 32px 8vw 56px;
+}
+
+.selo {
+  margin: 0;
+  color: var(--laranja);
+  font-size: 0.82rem;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+h1 {
+  margin: 8px 0 0;
+  font-size: clamp(1.8rem, 4vw, 2.6rem);
+  line-height: 1.15;
+}
+
+.atualizado {
+  color: #455a64;
+}
+
+h2 {
+  margin: 0 0 8px;
+  padding-top: 8px;
+  border-top: 3px solid var(--verde);
+  font-size: 1.25rem;
+}
+
+section {
+  margin-top: 22px;
+}
+
+p,
+li {
+  line-height: 1.5;
+}
+
+.contato {
+  margin-top: 28px;
+  padding: 18px;
+  border: 2px solid var(--laranja);
+  border-radius: 16px;
+  background: #fff;
+}
+
+.contato a {
+  display: block;
+  margin-top: 8px;
+  color: var(--verde);
+  font-weight: 800;
+}
+
+@media (max-width: 700px) {
+  .topo,
+  article {
+    padding-left: 20px;
+    padding-right: 20px;
+  }
+}

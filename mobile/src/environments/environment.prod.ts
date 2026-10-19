@@ -1,8 +1,9 @@
 export const environment = {
   production: true,
-  apiUrl: 'https://api.appcompregado.com.br',
+  // Host público. As chamadas acrescentam /api (fica https://appcompregado.com.br/api/...).
+  apiUrl: 'https://appcompregado.com.br',
   /** Número do bot que recebe o código de verificação (DDI + DDD + número). */
-  whatsappVerificacao: '556199999999',
+  whatsappVerificacao: '5561994044146',
   whatsappSimulado: null as string | null,
   /** WhatsApp que fecha o plano Vendedor PRO (DDI + DDD + número). Substituir pelo telefone real. */
   whatsappPlanoPro: '5561999999999',

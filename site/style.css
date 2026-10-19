@@ -1,7 +1,8 @@
 :root {
-  --verde: #1f4931;
-  --verde-escuro: #0f2418;
-  --verde-vivo: #22c55e;
+  --verde: #1c3829;
+  --verde-escuro: #10241a;
+  --verde-vivo: #748010;
+  --laranja: #d06818;
   --terra: #71502f;
   --whatsapp: #25d366;
   --creme: #f3efe6;
@@ -47,7 +48,7 @@ a {
   position: absolute;
   left: -999px;
   top: 0;
-  background: var(--verde-vivo);
+  background: var(--laranja);
   color: #000;
   padding: 0.6rem 1rem;
   z-index: 100;
@@ -87,9 +88,17 @@ a {
   letter-spacing: -0.02em;
 }
 
-.marca img {
-  width: 36px;
-  height: 36px;
+.marca img,
+.logo {
+  width: 40px;
+  height: 40px;
+  object-fit: contain;
+  object-position: center;
+}
+
+.logo-rodape {
+  width: 32px;
+  height: 32px;
 }
 
 .nav {
@@ -111,7 +120,7 @@ a {
 .nav-cta {
   padding: 0.55rem 1rem;
   border-radius: 999px;
-  background: var(--verde-vivo);
+  background: var(--laranja);
   color: #04120a;
 }
 
@@ -173,7 +182,7 @@ a {
   font-size: clamp(1.6rem, 4vw, 2.35rem);
   font-weight: 800;
   letter-spacing: -0.03em;
-  color: var(--verde-vivo);
+  color: var(--laranja);
 }
 
 .hero h1 {
@@ -217,7 +226,7 @@ a {
 }
 
 .botao-principal {
-  background: var(--verde-vivo);
+  background: var(--laranja);
   color: #04120a;
 }
 
@@ -238,7 +247,7 @@ a {
 
 .olho {
   margin: 0 0 0.5rem;
-  color: var(--verde-vivo);
+  color: var(--laranja);
   font-weight: 700;
   letter-spacing: 0.04em;
   text-transform: uppercase;
@@ -282,7 +291,7 @@ a {
 
 .feature {
   padding: 1.5rem 1.35rem 1.6rem;
-  border-top: 2px solid var(--verde-vivo);
+  border-top: 2px solid var(--laranja);
   background: rgba(15, 36, 24, 0.55);
   opacity: 0;
   transform: translateY(18px);
@@ -298,7 +307,7 @@ a {
   display: inline-flex;
   width: 40px;
   height: 40px;
-  color: var(--verde-vivo);
+  color: var(--laranja);
   margin-bottom: 1rem;
 }
 
@@ -352,7 +361,7 @@ a {
   width: 0.55rem;
   height: 0.55rem;
   border-radius: 50%;
-  background: var(--verde-vivo);
+  background: var(--laranja);
 }
 
 .telefone {
@@ -398,7 +407,7 @@ a {
 .app-marca {
   font-family: var(--fonte-display);
   font-weight: 700;
-  color: var(--verde-vivo);
+  color: var(--laranja);
 }
 
 .app-chip {
@@ -447,7 +456,7 @@ a {
 }
 
 .app-preco {
-  color: var(--verde-vivo);
+  color: var(--laranja);
   font-weight: 700;
   font-size: 0.9rem;
 }
@@ -522,7 +531,7 @@ a {
 }
 
 .rodape-links a:hover {
-  color: var(--verde-vivo);
+  color: var(--laranja);
 }
 
 @media (min-width: 760px) {

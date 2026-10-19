@@ -14,6 +14,9 @@
 
 <ion-content class="ion-padding">
   <ng-container *ngIf="modo !== 'recuperar'; else recuperacao">
+    <div class="marca-auth">
+      <img src="assets/icon/logo.png" alt="CompreGado" />
+    </div>
     <p>
       {{
         modo === 'cadastro'
