@@ -1,0 +1,14 @@
+{
+  "name": "leitor-whatsapp-local",
+  "private": true,
+  "description": "Um WhatsApp por arquivo: sistema, radar e consultor.",
+  "scripts": {
+    "sistema": "node sistema.js",
+    "radar": "node radar.js",
+    "consultor": "node consultor.js"
+  },
+  "dependencies": {
+    "qrcode": "^1.5.4",
+    "whatsapp-web.js": "^1.26.0"
+  }
+}

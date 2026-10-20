@@ -40,13 +40,14 @@ public class SecurityConfig {
                         .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
                         .requestMatchers("/error").permitAll()
                         .requestMatchers(HttpMethod.GET, "/api/auth/verificar-status").authenticated()
+                        .requestMatchers(HttpMethod.POST, "/api/auth/verificar/solicitar", "/api/auth/verificar/confirmar")
+                                .authenticated()
                         .requestMatchers("/api/auth/**").permitAll()
+                        .requestMatchers(HttpMethod.GET, "/api/robo/fila").permitAll()
+                        .requestMatchers(HttpMethod.POST, "/api/robo/fila/*/enviada", "/api/robo/fila/*/falhou").permitAll()
                         .requestMatchers(HttpMethod.POST,
-                                "/api/webhook/whatsapp",
-                                "/api/webhook/evolution",
-                                "/api/webhook/whatsapp-scraper").permitAll()
-                        // Só existe com envio-no-log ligado e só atende a própria máquina (WhatsappSimuladorController).
-                        .requestMatchers("/dev/whatsapp", "/dev/whatsapp/**").permitAll()
+                                "/api/webhook/whatsapp-scraper",
+                                "/api/webhook/radar-ofertas").permitAll()
                         .requestMatchers(HttpMethod.GET, "/api/anuncios/meus").authenticated()
                         .requestMatchers(HttpMethod.GET, "/api/anuncios", "/api/anuncios/*").permitAll()
                         .requestMatchers(HttpMethod.GET, "/api/categorias", "/api/cidades").permitAll()

@@ -1,85 +1,86 @@
-import { Component, HostListener, Input, NgZone, OnDestroy, OnInit } from '@angular/core';
+import { HttpErrorResponse } from '@angular/common/http';
+import { Component, OnDestroy } from '@angular/core';
 import { ModalController } from '@ionic/angular/lazy';
-import { environment } from '../../../environments/environment';
 import { AuthService } from '../../services/auth.service';
 
-const INTERVALO_CONSULTA_MS = 3000;
-
-/** Fecha com role 'verificado' quando o backend confirma; 'cancel' se o usuário desistir. */
+/** A pessoa digita o código de 6 dígitos que o robô mandou no WhatsApp dela. */
 @Component({
   selector: 'app-verificar-whatsapp',
   templateUrl: './verificar-whatsapp.component.html',
   styleUrls: ['./verificar-whatsapp.component.scss'],
   standalone: false,
 })
-export class VerificarWhatsappComponent implements OnInit, OnDestroy {
-  @Input({ required: true }) codigo!: string;
-  @Input() numeroBot?: string | null;
-
-  abriuWhatsapp = false;
-  private timer?: ReturnType<typeof setInterval>;
-  private consultando = false;
-  private concluido = false;
+export class VerificarWhatsappComponent implements OnDestroy {
+  codigo = '';
+  enviando = false;
+  confirmando = false;
+  erro = '';
+  reenviarEm = 0;
+  private contador?: ReturnType<typeof setInterval>;
 
   constructor(
     private readonly auth: AuthService,
-    private readonly modalCtrl: ModalController,
-    private readonly zone: NgZone
+    private readonly modalCtrl: ModalController
   ) {}
 
-  ngOnInit(): void {
-    this.timer = setInterval(() => void this.consultar(), INTERVALO_CONSULTA_MS);
-  }
-
   ngOnDestroy(): void {
-    clearInterval(this.timer);
+    clearInterval(this.contador);
   }
 
-  /** Quem volta do WhatsApp não precisa esperar o próximo ciclo de 3 s. */
-  @HostListener('document:visibilitychange')
-  aoVoltarParaOApp(): void {
-    if (document.visibilityState === 'visible') {
-      void this.consultar();
+  get codigoValido(): boolean {
+    return /^\d{6}$/.test(this.codigo.trim());
+  }
+
+  async enviarCodigo(): Promise<void> {
+    if (this.enviando || this.reenviarEm > 0) {
+      return;
+    }
+    this.enviando = true;
+    this.erro = '';
+    try {
+      const resposta = await this.auth.solicitarVerificacao();
+      this.reenviarEm = resposta.reenviarEmSegundos;
+      this.contador = setInterval(() => {
+        this.reenviarEm = Math.max(this.reenviarEm - 1, 0);
+        if (this.reenviarEm === 0) {
+          clearInterval(this.contador);
+        }
+      }, 1000);
+    } catch (erro) {
+      const status = erro instanceof HttpErrorResponse ? erro.status : 0;
+      this.erro =
+        status === 429
+          ? 'Aguarde um pouco para pedir outro código.'
+          : 'Não foi possível enviar o código agora.';
+    } finally {
+      this.enviando = false;
     }
   }
 
-  confirmar(): void {
-    const texto = 'Quero+confirmar+meu+cadastro+no+CompreGado.+Codigo:+' + encodeURIComponent(this.codigo);
-    const simulador = environment.whatsappSimulado;
-    if (simulador) {
-      const remetente = encodeURIComponent(this.auth.snapshot?.whatsapp ?? '');
-      window.open(`${simulador}?numero=${remetente}&texto=${texto}`, '_blank');
-    } else {
-      const numero = this.numeroBot || environment.whatsappVerificacao;
-      window.open(`https://wa.me/${numero}?text=${texto}`, '_system');
+  async confirmar(): Promise<void> {
+    if (this.confirmando || !this.codigoValido) {
+      this.erro = this.codigoValido ? '' : 'Digite os 6 números do código.';
+      return;
     }
-    this.abriuWhatsapp = true;
+    this.confirmando = true;
+    this.erro = '';
+    try {
+      const status = await this.auth.confirmarVerificacao(this.codigo.trim());
+      if (status.telefoneVerificado) {
+        await this.modalCtrl.dismiss(null, 'verificado');
+      }
+    } catch (erro) {
+      const status = erro instanceof HttpErrorResponse ? erro.status : 0;
+      this.erro =
+        status === 410
+          ? 'Este código expirou. Peça outro.'
+          : 'Código incorreto. Confira a mensagem no WhatsApp.';
+    } finally {
+      this.confirmando = false;
+    }
   }
 
   fechar(): void {
     void this.modalCtrl.dismiss(null, 'cancel');
-  }
-
-  private async consultar(): Promise<void> {
-    if (this.consultando || this.concluido) {
-      return;
-    }
-    this.consultando = true;
-    try {
-      const status = await this.auth.statusVerificacao();
-      if (status.telefoneVerificado) {
-        this.concluido = true;
-        clearInterval(this.timer);
-        this.auth.marcarVerificado();
-        await this.modalCtrl.dismiss(null, 'verificado');
-      } else if (status.codigoVerificacao && status.codigoVerificacao !== this.codigo) {
-        const codigo = status.codigoVerificacao;
-        this.zone.run(() => (this.codigo = codigo));
-      }
-    } catch {
-      // Falha de rede: o próximo ciclo tenta de novo.
-    } finally {
-      this.consultando = false;
-    }
   }
 }

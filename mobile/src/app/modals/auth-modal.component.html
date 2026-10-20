@@ -19,12 +19,15 @@
     </div>
     <p>
       {{
-        modo === 'cadastro'
-          ? 'Só 3 dados, sem e-mail. Seu WhatsApp é por onde os compradores vão falar com você.'
-          : 'Entre com o WhatsApp e a senha da sua conta.'
+        modo === 'cadastro' && etapaCadastro === 'codigo'
+          ? 'Digite o código de 6 dígitos que chegou no WhatsApp ' + whatsapp + '.'
+          : modo === 'cadastro'
+            ? 'Só 3 dados, sem e-mail. Vamos mandar um código para este WhatsApp antes de criar a conta.'
+            : 'Entre com o WhatsApp e a senha da sua conta.'
       }}
     </p>
 
+    <ng-container *ngIf="modo !== 'cadastro' || etapaCadastro === 'dados'; else etapaCodigo">
     <div class="campos">
       <ion-input
         *ngIf="modo === 'cadastro'"
@@ -86,12 +89,37 @@
     <ion-button expand="block" class="ion-margin-top botao-whatsapp" [disabled]="carregando" (click)="enviar()">
       <ion-spinner *ngIf="carregando" slot="start" name="crescent"></ion-spinner>
       <ion-icon *ngIf="!carregando" slot="start" name="logo-whatsapp"></ion-icon>
-      {{ carregando ? 'Aguarde...' : modo === 'cadastro' ? 'Criar minha conta' : 'Entrar' }}
+      {{ carregando ? 'Aguarde...' : modo === 'cadastro' ? 'Receber código' : 'Entrar' }}
     </ion-button>
 
     <ion-button expand="block" fill="clear" (click)="irPara(modo === 'cadastro' ? 'login' : 'cadastro')">
       {{ modo === 'cadastro' ? 'Já tenho conta' : 'Quero me cadastrar' }}
     </ion-button>
+    </ng-container>
+
+    <ng-template #etapaCodigo>
+      <ion-input
+        fill="outline"
+        label="Código de 6 dígitos"
+        labelPlacement="stacked"
+        type="text"
+        inputmode="numeric"
+        autocomplete="one-time-code"
+        maxlength="6"
+        placeholder="000000"
+        [(ngModel)]="codigoCadastro"
+      ></ion-input>
+      <ion-button expand="block" class="ion-margin-top botao-whatsapp" [disabled]="carregando || !codigoCadastroValido" (click)="confirmarConta()">
+        <ion-spinner *ngIf="carregando" slot="start" name="crescent"></ion-spinner>
+        Confirmar e entrar
+      </ion-button>
+      <ion-button expand="block" fill="clear" [disabled]="carregando || reenviarEm > 0" (click)="enviar()">
+        {{ reenviarEm > 0 ? 'Reenviar código em ' + reenviarEm + 's' : 'Reenviar código' }}
+      </ion-button>
+      <ion-button expand="block" fill="clear" size="small" (click)="etapaCadastro = 'dados'">
+        Corrigir dados
+      </ion-button>
+    </ng-template>
   </ng-container>
 
   <ng-template #recuperacao>

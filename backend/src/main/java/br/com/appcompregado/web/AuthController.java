@@ -4,9 +4,12 @@ import br.com.appcompregado.domain.Usuario;
 import br.com.appcompregado.service.AuthService;
 import br.com.appcompregado.service.OtpCadastroService;
 import br.com.appcompregado.service.RecuperacaoSenhaService;
+import br.com.appcompregado.service.CadastroPendenteService;
 import br.com.appcompregado.service.VerificacaoWhatsappService;
 import br.com.appcompregado.web.dto.AuthRequest;
 import br.com.appcompregado.web.dto.AuthResponse;
+import br.com.appcompregado.web.dto.CodigoRequest;
+import br.com.appcompregado.web.dto.ConfirmarCadastroRequest;
 import br.com.appcompregado.web.dto.EsqueciSenhaRequest;
 import br.com.appcompregado.web.dto.EsqueciSenhaResponse;
 import br.com.appcompregado.web.dto.LoginRequest;
@@ -31,22 +34,36 @@ public class AuthController {
     private final VerificacaoWhatsappService verificacao;
     private final RecuperacaoSenhaService recuperacao;
     private final OtpCadastroService otpCadastro;
+    private final CadastroPendenteService cadastroPendente;
 
     public AuthController(
             AuthService authService,
             VerificacaoWhatsappService verificacao,
             RecuperacaoSenhaService recuperacao,
-            OtpCadastroService otpCadastro) {
+            OtpCadastroService otpCadastro,
+            CadastroPendenteService cadastroPendente) {
         this.authService = authService;
         this.verificacao = verificacao;
         this.recuperacao = recuperacao;
         this.otpCadastro = otpCadastro;
+        this.cadastroPendente = cadastroPendente;
     }
 
     @PostMapping("/cadastro")
     @ResponseStatus(HttpStatus.CREATED)
     public AuthResponse cadastrar(@Valid @RequestBody AuthRequest request) {
         return authService.cadastrar(request);
+    }
+
+    /** Guarda nome e senha e manda o código. A conta só existe depois de /cadastro/confirmar. */
+    @PostMapping("/cadastro/solicitar")
+    public EsqueciSenhaResponse solicitarCadastro(@Valid @RequestBody AuthRequest request) {
+        return cadastroPendente.solicitar(request);
+    }
+
+    @PostMapping("/cadastro/confirmar")
+    public AuthResponse confirmarCadastro(@Valid @RequestBody ConfirmarCadastroRequest request) {
+        return cadastroPendente.confirmar(request.whatsapp(), request.codigo());
     }
 
     @PostMapping("/login")
@@ -80,5 +97,16 @@ public class AuthController {
     @GetMapping("/verificar-status")
     public VerificacaoStatusResponse verificarStatus(@AuthenticationPrincipal Usuario usuario) {
         return verificacao.status(usuario);
+    }
+
+    @PostMapping("/verificar/solicitar")
+    public EsqueciSenhaResponse solicitarVerificacao(@AuthenticationPrincipal Usuario usuario) {
+        return verificacao.solicitarCodigo(usuario);
+    }
+
+    @PostMapping("/verificar/confirmar")
+    public VerificacaoStatusResponse confirmarVerificacao(
+            @AuthenticationPrincipal Usuario usuario, @Valid @RequestBody CodigoRequest request) {
+        return verificacao.confirmarCodigo(usuario, request.codigo());
     }
 }

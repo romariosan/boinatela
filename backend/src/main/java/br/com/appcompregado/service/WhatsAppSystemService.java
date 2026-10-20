@@ -1,30 +1,22 @@
 package br.com.appcompregado.service;
 
-import br.com.appcompregado.config.ChipsWhatsappProperties;
-import br.com.appcompregado.config.WhatsappApiProperties;
+import br.com.appcompregado.domain.enums.ChipMensagem;
+import java.time.Duration;
 import org.springframework.stereotype.Service;
 
-/** Chip 1: só OTP, login e senha. Não escuta grupo e não prospecta. */
+/** Chip 1: código de cadastro, de senha e de reivindicação. Não entra em grupo. */
 @Service
 public class WhatsAppSystemService {
 
-    private final WhatsappBotService bot;
-    private final WhatsappApiProperties api;
-    private final ChipsWhatsappProperties chips;
+    private static final Duration VALIDADE = Duration.ofMinutes(10);
 
-    public WhatsAppSystemService(
-            WhatsappBotService bot, WhatsappApiProperties api, ChipsWhatsappProperties chips) {
-        this.bot = bot;
-        this.api = api;
-        this.chips = chips;
+    private final FilaMensagemService fila;
+
+    public WhatsAppSystemService(FilaMensagemService fila) {
+        this.fila = fila;
     }
 
     public void enviar(String whatsapp, String mensagem) {
-        String instancia = chips.getSystem().getInstance();
-        if (api.configurada() && instancia != null && !instancia.isBlank()) {
-            bot.enviarNaInstancia(api.getUrl(), api.getKey(), instancia, whatsapp, mensagem);
-            return;
-        }
-        bot.enviar(whatsapp, mensagem);
+        fila.enfileirar(ChipMensagem.SISTEMA, whatsapp, mensagem, VALIDADE);
     }
 }

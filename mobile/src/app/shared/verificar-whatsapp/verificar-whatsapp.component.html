@@ -10,20 +10,34 @@
 <ion-content class="ion-padding">
   <div class="conteudo">
     <ion-icon class="icone" name="shield-checkmark-outline" aria-hidden="true"></ion-icon>
-    <h2>Confirme que o número é seu</h2>
-    <p class="mensagem">Para sua segurança e dos compradores, confirme que este WhatsApp pertence a você.</p>
-    <p class="passos">Toque no botão, envie a mensagem que já vem pronta e volte para o app. A confirmação é automática.</p>
+    <h2>Digite o código do WhatsApp</h2>
+    <p class="mensagem">
+      Vamos mandar um código de 6 dígitos para o WhatsApp desta conta. Ele vale por 10 minutos.
+    </p>
 
-    <ion-button expand="block" class="botao-whatsapp" (click)="confirmar()">
-      <ion-icon slot="start" name="logo-whatsapp"></ion-icon>
-      Confirmar no meu WhatsApp
+    <ion-button expand="block" class="botao-whatsapp" (click)="enviarCodigo()" [disabled]="enviando || reenviarEm > 0">
+      <ion-spinner *ngIf="enviando" slot="start" name="crescent"></ion-spinner>
+      <ion-icon *ngIf="!enviando" slot="start" name="logo-whatsapp"></ion-icon>
+      {{ reenviarEm > 0 ? 'Reenviar código em ' + reenviarEm + 's' : 'Enviar código' }}
     </ion-button>
 
-    <p class="codigo">Código: <strong>{{ codigo }}</strong></p>
+    <ion-input
+      class="campo-codigo"
+      fill="outline"
+      label="Código"
+      labelPlacement="stacked"
+      type="text"
+      inputmode="numeric"
+      autocomplete="one-time-code"
+      maxlength="6"
+      placeholder="000000"
+      [(ngModel)]="codigo"
+    ></ion-input>
 
-    <p class="aguardando" *ngIf="abriuWhatsapp" role="status">
-      <ion-spinner name="dots"></ion-spinner>
-      Aguardando a confirmação...
-    </p>
+    <ion-button expand="block" (click)="confirmar()" [disabled]="confirmando || !codigoValido">
+      <ion-spinner *ngIf="confirmando" slot="start" name="crescent"></ion-spinner>
+      Confirmar
+    </ion-button>
+    <p class="erro" *ngIf="erro" role="alert">{{ erro }}</p>
   </div>
 </ion-content>

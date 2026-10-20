@@ -33,15 +33,15 @@ ion-button {
   width: 100%;
 }
 
-.codigo {
-  margin: 12px 0 0;
-  font-size: 0.85rem;
-  color: var(--ion-color-medium);
+.campo-codigo {
+  width: 100%;
+  margin: 16px 0;
+  text-align: left;
+}
 
-  strong {
-    letter-spacing: 0.06em;
-    color: var(--ion-text-color);
-  }
+.erro {
+  margin: 8px 0 0;
+  color: var(--ion-color-danger);
 }
 
 .aguardando {

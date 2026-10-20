@@ -73,12 +73,10 @@ app:
     secret: "compregado-dev-secret-key-mude-em-producao-256bits!"
     expiration-ms: 86400000
   whatsapp:
-    # Sem valor, POST /api/webhook/whatsapp responde 503. Nunca deixar um padrão fixo aqui.
+    # Sem valor, o radar responde 503. O robô usa o mesmo segredo no header X-Webhook-Token.
     webhook-token: ${WHATSAPP_WEBHOOK_TOKEN:}
-    # Evolution API: URL base, chave (apikey), instância e número conectado (com DDI).
-    bot-url: ${WHATSAPP_BOT_URL:}
-    bot-token: ${WHATSAPP_BOT_TOKEN:}
-    bot-instancia: ${WHATSAPP_BOT_INSTANCIA:compregado}
+    # Se vazio, GET /api/robo/fila aceita o webhook-token.
+    robo-token: ${ROBO_TOKEN:}
     bot-numero: ${WHATSAPP_BOT_NUMERO:}
     # true só em desenvolvimento sem bot: o código do "Esqueci minha senha" vai para o log.
     envio-no-log: ${WHATSAPP_ENVIO_NO_LOG:false}

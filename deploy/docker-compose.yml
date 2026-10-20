@@ -151,8 +151,6 @@ services:
     depends_on:
       postgres:
         condition: service_healthy
-      evolution-api:
-        condition: service_started
     environment:
       SPRING_PROFILES_ACTIVE: ${SPRING_PROFILES_ACTIVE:-prod}
       DB_URL: jdbc:postgresql://postgres:5432/${POSTGRES_DB:-compregado}
@@ -161,9 +159,7 @@ services:
       JWT_SECRET: ${JWT_SECRET:?defina JWT_SECRET no .env}
       CORS_ALLOWED_ORIGINS: ${CORS_ALLOWED_ORIGINS:-https://appcompregado.com.br,https://www.appcompregado.com.br,https://localhost,capacitor://localhost}
       WHATSAPP_WEBHOOK_TOKEN: ${WHATSAPP_WEBHOOK_TOKEN:?defina WHATSAPP_WEBHOOK_TOKEN no .env}
-      WHATSAPP_BOT_URL: http://evolution-api:8080
-      WHATSAPP_BOT_TOKEN: ${EVOLUTION_API_KEY}
-      WHATSAPP_BOT_INSTANCIA: ${EVOLUTION_INSTANCIA:-compregado}
+      ROBO_TOKEN: ${ROBO_TOKEN:?defina ROBO_TOKEN no .env}
       WHATSAPP_BOT_NUMERO: ${WHATSAPP_BOT_NUMERO:-}
     # Só no loopback: o Nginx da própria VPS é o único cliente.
     ports:

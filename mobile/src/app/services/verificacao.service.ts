@@ -40,14 +40,13 @@ export class VerificacaoService {
       );
       return false;
     }
-    if (status.telefoneVerificado || !status.codigoVerificacao) {
+    if (status.telefoneVerificado) {
       this.auth.marcarVerificado();
       return true;
     }
 
     const modal = await this.modalCtrl.create({
       component: VerificarWhatsappComponent,
-      componentProps: { codigo: status.codigoVerificacao, numeroBot: status.whatsappBot },
       breakpoints: [0, 0.75, 1],
       initialBreakpoint: 0.75,
       handle: true,

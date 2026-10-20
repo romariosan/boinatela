@@ -1,6 +1,7 @@
 package br.com.appcompregado.web;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.clearInvocations;
@@ -12,7 +13,8 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 
 import br.com.appcompregado.repository.CodigoRecuperacaoRepository;
 import br.com.appcompregado.repository.UsuarioRepository;
-import br.com.appcompregado.service.WhatsappBotService;
+import br.com.appcompregado.domain.enums.ChipMensagem;
+import br.com.appcompregado.service.FilaMensagemService;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import java.time.LocalDateTime;
 import java.util.Map;
@@ -51,7 +53,7 @@ class RecuperacaoSenhaTest {
     private CodigoRecuperacaoRepository codigos;
 
     @MockitoBean
-    private WhatsappBotService bot;
+    private FilaMensagemService fila;
 
     @Test
     void numeroNaoCadastradoDa404() throws Exception {
@@ -117,15 +119,15 @@ class RecuperacaoSenhaTest {
     void falhaNoBotNaoGuardaCodigoNemBloqueiaNovoPedido() throws Exception {
         cadastrar("61982220005", "antiga1");
         doThrow(new ResponseStatusException(HttpStatus.BAD_GATEWAY))
-                .when(bot).enviar(eq("61982220005"), anyString());
+                .when(fila).enfileirar(any(), eq("61982220005"), anyString(), any());
         pedir("61982220005").andExpect(status().isBadGateway());
         assertThat(codigos.findAll()).noneMatch(c -> c.getWhatsapp().equals("61982220005"));
     }
 
     private String codigoEnviado(String whatsapp) {
         ArgumentCaptor<String> mensagem = ArgumentCaptor.forClass(String.class);
-        verify(bot).enviar(eq(whatsapp), mensagem.capture());
-        clearInvocations(bot);
+        verify(fila).enfileirar(eq(ChipMensagem.SISTEMA), eq(whatsapp), mensagem.capture(), any());
+        clearInvocations(fila);
         Matcher matcher = CODIGO.matcher(mensagem.getValue());
         assertThat(matcher.find()).isTrue();
         return matcher.group(1);

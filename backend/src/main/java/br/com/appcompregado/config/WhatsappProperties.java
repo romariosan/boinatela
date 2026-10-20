@@ -5,19 +5,13 @@ import org.springframework.boot.context.properties.ConfigurationProperties;
 @ConfigurationProperties(prefix = "app.whatsapp")
 public class WhatsappProperties {
 
-    /** Segredo que o bot manda no header X-Webhook-Token. Vazio = webhook desligado. */
+    /** Segredo que o robô manda no header X-Webhook-Token ao publicar oferta de grupo. */
     private String webhookToken = "";
 
-    /** URL base da Evolution API, ex.: http://evolution:8080. Vazio = sem envio. */
-    private String botUrl = "";
+    /** Segredo do robô no header X-Robo-Token. Se vazio, vale o webhook-token. */
+    private String roboToken = "";
 
-    /** Chave da Evolution API (header apikey). */
-    private String botToken = "";
-
-    /** Nome da instância da Evolution conectada ao WhatsApp do CompreGado. */
-    private String botInstancia = "compregado";
-
-    /** Número do WhatsApp do bot com DDI (ex.: 5561999999999), para o app abrir o wa.me. */
+    /** Número do WhatsApp do sistema com DDI, só para a tela antiga de status. */
     private String botNumero = "";
 
     /**
@@ -34,28 +28,12 @@ public class WhatsappProperties {
         this.webhookToken = webhookToken;
     }
 
-    public String getBotUrl() {
-        return botUrl;
+    public String getRoboToken() {
+        return roboToken;
     }
 
-    public void setBotUrl(String botUrl) {
-        this.botUrl = botUrl;
-    }
-
-    public String getBotToken() {
-        return botToken;
-    }
-
-    public void setBotToken(String botToken) {
-        this.botToken = botToken;
-    }
-
-    public String getBotInstancia() {
-        return botInstancia;
-    }
-
-    public void setBotInstancia(String botInstancia) {
-        this.botInstancia = botInstancia;
+    public void setRoboToken(String roboToken) {
+        this.roboToken = roboToken;
     }
 
     public String getBotNumero() {

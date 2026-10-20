@@ -56,6 +56,27 @@ export class AuthService {
     return payload;
   }
 
+  solicitarCadastro(
+    nome: string,
+    whatsapp: string,
+    senha: string
+  ): Promise<{ expiraEmSegundos: number; reenviarEmSegundos: number }> {
+    return firstValueFrom(
+      this.http.post<{ expiraEmSegundos: number; reenviarEmSegundos: number }>(
+        `${environment.apiUrl}/api/auth/cadastro/solicitar`,
+        { nome, whatsapp, senha }
+      )
+    );
+  }
+
+  async confirmarCadastro(whatsapp: string, codigo: string): Promise<AuthPayload> {
+    const payload = await firstValueFrom(
+      this.http.post<AuthPayload>(`${environment.apiUrl}/api/auth/cadastro/confirmar`, { whatsapp, codigo })
+    );
+    this.iniciarSessao(payload);
+    return payload;
+  }
+
   esqueciSenha(whatsapp: string): Promise<{ expiraEmSegundos: number; reenviarEmSegundos: number }> {
     return firstValueFrom(
       this.http.post<{ expiraEmSegundos: number; reenviarEmSegundos: number }>(
@@ -104,6 +125,30 @@ export class AuthService {
       )
     );
     this.iniciarSessao(payload);
+  }
+
+  solicitarVerificacao(): Promise<{ expiraEmSegundos: number; reenviarEmSegundos: number }> {
+    return firstValueFrom(
+      this.http.post<{ expiraEmSegundos: number; reenviarEmSegundos: number }>(
+        `${environment.apiUrl}/api/auth/verificar/solicitar`,
+        {},
+        { headers: new HttpHeaders({ Authorization: `Bearer ${this.token ?? ''}` }) }
+      )
+    );
+  }
+
+  async confirmarVerificacao(codigo: string): Promise<VerificacaoStatus> {
+    const status = await firstValueFrom(
+      this.http.post<VerificacaoStatus>(
+        `${environment.apiUrl}/api/auth/verificar/confirmar`,
+        { codigo },
+        { headers: new HttpHeaders({ Authorization: `Bearer ${this.token ?? ''}` }) }
+      )
+    );
+    if (status.telefoneVerificado) {
+      this.marcarVerificado();
+    }
+    return status;
   }
 
   statusVerificacao(): Promise<VerificacaoStatus> {

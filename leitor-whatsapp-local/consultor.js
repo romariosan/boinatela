@@ -1,0 +1,1 @@
+require('./comum').iniciar('consultor');

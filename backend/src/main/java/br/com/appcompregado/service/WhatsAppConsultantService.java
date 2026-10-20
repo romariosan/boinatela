@@ -1,11 +1,11 @@
 package br.com.appcompregado.service;
 
-import br.com.appcompregado.config.ChipsWhatsappProperties;
-import br.com.appcompregado.config.WhatsappApiProperties;
 import br.com.appcompregado.domain.Anuncio;
+import br.com.appcompregado.domain.enums.ChipMensagem;
 import br.com.appcompregado.domain.Usuario;
 import br.com.appcompregado.domain.enums.StatusProcessamento;
 import br.com.appcompregado.repository.AnuncioRepository;
+import java.time.Duration;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
@@ -60,27 +60,23 @@ public class WhatsAppConsultantService {
         "Fico à disposição por esse anúncio."
     };
 
+    private static final Duration VALIDADE = Duration.ofHours(24);
+
     private final AnuncioRepository anuncios;
     private final AuthService authService;
-    private final WhatsappBotService bot;
-    private final WhatsappApiProperties api;
-    private final ChipsWhatsappProperties chips;
+    private final FilaMensagemService fila;
     private final TransactionTemplate transacao;
     private final String cron;
 
     public WhatsAppConsultantService(
             AnuncioRepository anuncios,
             AuthService authService,
-            WhatsappBotService bot,
-            WhatsappApiProperties api,
-            ChipsWhatsappProperties chips,
+            FilaMensagemService fila,
             TransactionTemplate transacao,
             @Value("${compregado.consultor.cron:0 * * * * ?}") String cron) {
         this.anuncios = anuncios;
         this.authService = authService;
-        this.bot = bot;
-        this.api = api;
-        this.chips = chips;
+        this.fila = fila;
         this.transacao = transacao;
         this.cron = cron;
     }
@@ -152,12 +148,7 @@ public class WhatsAppConsultantService {
     }
 
     private void despachar(String telefone, String texto) {
-        String instancia = chips.getConsultant().getInstance();
-        if (api.configurada() && instancia != null && !instancia.isBlank()) {
-            bot.enviarNaInstancia(api.getUrl(), api.getKey(), instancia, telefone, texto);
-            return;
-        }
-        bot.enviar(telefone, texto);
+        fila.enfileirar(ChipMensagem.CONSULTOR, telefone, texto, VALIDADE);
     }
 
     /** Rascunho sem foto não leva link: a pessoa só recebe o pedido da foto. */

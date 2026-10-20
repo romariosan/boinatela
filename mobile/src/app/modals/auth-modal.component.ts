@@ -3,10 +3,10 @@ import { ChangeDetectorRef, Component, NgZone, OnDestroy } from '@angular/core';
 import { LoadingController, ModalController, ToastController } from '@ionic/angular/lazy';
 import { environment } from '../../environments/environment';
 import { AuthService, MINIMO_SENHA } from '../services/auth.service';
-import { VerificacaoService } from '../services/verificacao.service';
 
 type Modo = 'login' | 'cadastro' | 'recuperar';
 type EtapaRecuperacao = 'solicitar' | 'redefinir';
+type EtapaCadastro = 'dados' | 'codigo';
 
 const TITULOS: Record<Modo, string> = {
   login: 'Entrar',
@@ -24,10 +24,12 @@ export class AuthModalComponent implements OnDestroy {
   readonly minimo = MINIMO_SENHA;
   modo: Modo = 'login';
   etapa: EtapaRecuperacao = 'solicitar';
+  etapaCadastro: EtapaCadastro = 'dados';
   nome = '';
   whatsapp = '';
   senha = '';
   codigo = '';
+  codigoCadastro = '';
   novaSenha = '';
   confirmarSenha = '';
   reenviarEm = 0;
@@ -41,7 +43,6 @@ export class AuthModalComponent implements OnDestroy {
   constructor(
     private readonly modalCtrl: ModalController,
     private readonly auth: AuthService,
-    private readonly verificacao: VerificacaoService,
     private readonly toastCtrl: ToastController,
     private readonly loadingCtrl: LoadingController,
     private readonly zone: NgZone,
@@ -54,6 +55,10 @@ export class AuthModalComponent implements OnDestroy {
 
   get codigoValido(): boolean {
     return /^\d{4}$/.test(this.codigo);
+  }
+
+  get codigoCadastroValido(): boolean {
+    return /^\d{6}$/.test(this.codigoCadastro.trim());
   }
 
   get simuladorWhatsapp(): string | null {
@@ -84,6 +89,7 @@ export class AuthModalComponent implements OnDestroy {
   irPara(modo: Modo): void {
     this.modo = modo;
     this.tentouEnviar = false;
+    this.etapaCadastro = 'dados';
     if (modo === 'recuperar') {
       this.etapa = 'solicitar';
       this.tentouRedefinir = false;
@@ -128,16 +134,18 @@ export class AuthModalComponent implements OnDestroy {
     }
     this.carregando = true;
     try {
-      // login() e cadastrar() já chamam auth.iniciarSessao(), que emite o estado logado para o app todo.
       if (cadastro) {
-        await this.auth.cadastrar(this.nome.trim(), this.whatsapp, this.senha);
+        const resposta = await this.auth.solicitarCadastro(this.nome.trim(), this.whatsapp, this.senha);
+        this.atualizar(() => {
+          this.etapaCadastro = 'codigo';
+          this.codigoCadastro = '';
+          this.iniciarContador(resposta.reenviarEmSegundos);
+        });
+        await this.avisar('Enviamos o código de 6 dígitos para o seu WhatsApp.', 'success', 'top');
       } else {
         await this.auth.login(this.whatsapp, this.senha);
-      }
-      await this.modalCtrl.dismiss({ ok: true });
-      await this.avisar(`Bem-vindo ao CompreGado, ${this.primeiroNome()}!`, 'success', 'top');
-      if (cadastro) {
-        void this.verificacao.exigirVerificacao();
+        await this.modalCtrl.dismiss({ ok: true });
+        await this.avisar(`Bem-vindo ao CompreGado, ${this.primeiroNome()}!`, 'success', 'top');
       }
     } catch (erro) {
       const status = erro instanceof HttpErrorResponse ? erro.status : -1;
@@ -145,11 +153,35 @@ export class AuthModalComponent implements OnDestroy {
         await this.avisar('Sem internet. Tente de novo quando tiver sinal.', 'warning', 'top');
       } else if (cadastro && status === 409) {
         await this.avisarComAcao('Este WhatsApp já tem conta.', 'Entrar', () => this.irPara('login'));
+      } else if (cadastro && status === 429) {
+        await this.avisar('Aguarde um pouco para pedir outro código.', 'warning', 'top');
       } else if (!cadastro && status === 401) {
         await this.avisarComAcao('WhatsApp ou senha incorretos.', 'Esqueci a senha', () => this.irPara('recuperar'));
       } else {
         await this.avisar('Não foi possível concluir agora. Tente de novo.', 'danger', 'top');
       }
+    } finally {
+      this.atualizar(() => (this.carregando = false));
+    }
+  }
+
+  async confirmarConta(): Promise<void> {
+    if (this.carregando || !this.codigoCadastroValido) {
+      return;
+    }
+    this.carregando = true;
+    try {
+      await this.auth.confirmarCadastro(this.whatsapp, this.codigoCadastro.trim());
+      await this.modalCtrl.dismiss({ ok: true });
+      await this.avisar(`Bem-vindo ao CompreGado, ${this.primeiroNome()}!`, 'success', 'top');
+    } catch (erro) {
+      const status = erro instanceof HttpErrorResponse ? erro.status : 0;
+      const mensagens: Record<number, string> = {
+        400: 'Código incorreto. Confira a mensagem no WhatsApp.',
+        410: 'Este código expirou. Peça outro.',
+        409: 'Este WhatsApp já tem conta.',
+      };
+      await this.avisar(mensagens[status] ?? 'Não foi possível criar a conta agora.', 'danger', 'top');
     } finally {
       this.atualizar(() => (this.carregando = false));
     }

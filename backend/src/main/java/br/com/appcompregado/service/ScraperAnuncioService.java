@@ -17,7 +17,9 @@ import java.math.BigDecimal;
 import java.time.Duration;
 import java.time.Instant;
 import java.time.LocalDateTime;
+import java.util.ArrayList;
 import java.util.Base64;
+import java.util.List;
 import java.util.Locale;
 import java.util.Optional;
 import java.util.UUID;
@@ -136,15 +138,21 @@ public class ScraperAnuncioService {
         anuncio.setReivindicado(false);
         anuncio.setDataCaptura(LocalDateTime.now());
         anuncio.setVendedor(contaCaptura());
-        String foto = guardarFoto(data, corpo);
-        if (foto == null) {
+        List<String> fotos = fotosDasMidias(corpo);
+        if (fotos.isEmpty()) {
+            String foto = guardarFoto(data, corpo);
+            if (foto != null) {
+                fotos = List.of(foto);
+            }
+        }
+        if (fotos.isEmpty()) {
             anuncio.setAtivo(false);
             anuncio.setStatusProcessamento(StatusProcessamento.RASCUNHO_SEM_FOTO);
         } else {
             anuncio.setAtivo(true);
             anuncio.setStatusProcessamento(StatusProcessamento.PUBLICADO);
-            anuncio.setUrlFotoPrincipal(foto);
-            anuncio.getFotos().add(foto);
+            anuncio.setUrlFotoPrincipal(fotos.get(0));
+            anuncio.getFotos().addAll(fotos);
         }
         anuncio = anuncios.save(anuncio);
         if (anuncio.getStatusProcessamento() == StatusProcessamento.PUBLICADO) {
@@ -261,6 +269,51 @@ public class ScraperAnuncioService {
 
     private static boolean temMidia(JsonNode data, JsonNode corpo) {
         return !urlDaFoto(data, corpo).isBlank() || !base64DaFoto(data, corpo).isBlank();
+    }
+
+    private List<String> fotosDasMidias(JsonNode corpo) {
+        JsonNode midias = corpo.path("midias");
+        if (!midias.isArray() || midias.isEmpty()) {
+            return List.of();
+        }
+        List<String> fotos = new ArrayList<>();
+        for (JsonNode midia : midias) {
+            if (fotos.size() >= 5) {
+                break;
+            }
+            String tipo = midia.path("tipo").asText("image/jpeg");
+            String salva = salvarBase64(midia.path("base64").asText(""), tipo);
+            if (salva != null) {
+                fotos.add(salva);
+            }
+        }
+        return fotos;
+    }
+
+    private String salvarBase64(String base64, String tipo) {
+        if (base64 == null || base64.isBlank()) {
+            return null;
+        }
+        int virgula = base64.indexOf(',');
+        if (base64.startsWith("data:") && virgula > 0) {
+            base64 = base64.substring(virgula + 1);
+        }
+        if (base64.length() > MAXIMO_FOTO_BYTES * 2) {
+            return null;
+        }
+        try {
+            byte[] bytes = Base64.getDecoder().decode(base64);
+            if (bytes.length < 32 || bytes.length > MAXIMO_FOTO_BYTES) {
+                return null;
+            }
+            if (tipo == null || tipo.isBlank()) {
+                tipo = "image/jpeg";
+            }
+            return armazenamento.salvarBytes(bytes, tipo);
+        } catch (IllegalArgumentException e) {
+            log.info("Base64 de foto ilegível na captura.");
+            return null;
+        }
     }
 
     private String guardarFoto(JsonNode data, JsonNode corpo) {
