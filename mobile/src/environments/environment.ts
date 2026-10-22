@@ -4,7 +4,11 @@
 
 export const environment = {
   production: false,
-  apiUrl: 'https://appcompregado.com.br',
+  // Vazio de propósito: o navegador chama /api no próprio ng serve.
+  // O proxy (proxy.conf.js) encaminha para https://appcompregado.com.br sem o header Origin,
+  // porque a API de produção recusa CORS de http://127.0.0.1:4200.
+  // O build do APK troca este arquivo por environment.prod.ts (URL absoluta).
+  apiUrl: '',
   /** Número do bot que recebe o código de verificação (DDI + DDD + número). */
   whatsappVerificacao: '5561994044146',
   /** Simulador local só existe com a API na máquina. Nos testes contra a VPS o botão abre o wa.me. */

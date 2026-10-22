@@ -3,6 +3,7 @@ import { ChangeDetectorRef, Component, NgZone, OnDestroy } from '@angular/core';
 import { LoadingController, ModalController, ToastController } from '@ionic/angular/lazy';
 import { environment } from '../../environments/environment';
 import { AuthService, MINIMO_SENHA } from '../services/auth.service';
+import { pedidoNaoSaiu, registrarFalhaHttp } from '../services/conexao.service';
 
 type Modo = 'login' | 'cadastro' | 'recuperar';
 type EtapaRecuperacao = 'solicitar' | 'redefinir';
@@ -148,8 +149,9 @@ export class AuthModalComponent implements OnDestroy {
         await this.avisar(`Bem-vindo ao CompreGado, ${this.primeiroNome()}!`, 'success', 'top');
       }
     } catch (erro) {
+      registrarFalhaHttp(cadastro ? 'cadastro' : 'login', erro);
       const status = erro instanceof HttpErrorResponse ? erro.status : -1;
-      if (status === 0 || !navigator.onLine) {
+      if (pedidoNaoSaiu(erro)) {
         await this.avisar('Sem internet. Tente de novo quando tiver sinal.', 'warning', 'top');
       } else if (cadastro && status === 409) {
         await this.avisarComAcao('Este WhatsApp já tem conta.', 'Entrar', () => this.irPara('login'));
@@ -175,7 +177,12 @@ export class AuthModalComponent implements OnDestroy {
       await this.modalCtrl.dismiss({ ok: true });
       await this.avisar(`Bem-vindo ao CompreGado, ${this.primeiroNome()}!`, 'success', 'top');
     } catch (erro) {
-      const status = erro instanceof HttpErrorResponse ? erro.status : 0;
+      registrarFalhaHttp('confirmar-cadastro', erro);
+      const status = erro instanceof HttpErrorResponse ? erro.status : -1;
+      if (pedidoNaoSaiu(erro)) {
+        await this.avisar('Sem internet. Tente de novo quando tiver sinal.', 'warning', 'top');
+        return;
+      }
       const mensagens: Record<number, string> = {
         400: 'Código incorreto. Confira a mensagem no WhatsApp.',
         410: 'Este código expirou. Peça outro.',
@@ -211,7 +218,12 @@ export class AuthModalComponent implements OnDestroy {
       });
       await this.avisar('Enviamos o código para o seu WhatsApp.', 'success', 'top');
     } catch (erro) {
-      const status = erro instanceof HttpErrorResponse ? erro.status : 0;
+      registrarFalhaHttp('recuperar-senha', erro);
+      const status = erro instanceof HttpErrorResponse ? erro.status : -1;
+      if (pedidoNaoSaiu(erro)) {
+        await this.avisar('Sem internet. Tente de novo quando tiver sinal.', 'warning', 'bottom');
+        return;
+      }
       const mensagens: Record<number, string> = {
         404: 'Número de WhatsApp não cadastrado.',
         429: 'Você pediu códigos demais. Aguarde um pouco e tente de novo.',
@@ -241,7 +253,12 @@ export class AuthModalComponent implements OnDestroy {
       await this.modalCtrl.dismiss({ ok: true });
       await this.avisar('Senha alterada com sucesso! Você já está logado.', 'success', 'top');
     } catch (erro) {
-      const status = erro instanceof HttpErrorResponse ? erro.status : 0;
+      registrarFalhaHttp('redefinir-senha', erro);
+      const status = erro instanceof HttpErrorResponse ? erro.status : -1;
+      if (pedidoNaoSaiu(erro)) {
+        await this.avisar('Sem internet. Tente de novo quando tiver sinal.', 'warning', 'bottom');
+        return;
+      }
       if (status === 410) {
         this.atualizar(() => {
           this.codigo = '';

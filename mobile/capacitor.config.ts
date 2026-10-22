@@ -5,7 +5,15 @@ const config: CapacitorConfig = {
   appId: 'br.com.appcompregado',
   appName: 'CompreGado',
   webDir: 'www',
+  server: {
+    androidScheme: 'https',
+    // localhost faz o WebView do celular tentar a porta 443 e cair em ERR_CONNECTION_REFUSED.
+    hostname: 'compregado.local',
+  },
   plugins: {
+    CapacitorHttp: {
+      enabled: true,
+    },
     SplashScreen: {
       launchShowDuration: 2000,
       launchAutoHide: true,

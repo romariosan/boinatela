@@ -23,6 +23,7 @@ import {
 } from '../models/anuncio';
 import { UFS_REGIAO, UF_PADRAO, formatarCidade, separarCidade } from '../models/localidade';
 import { AnuncioService } from '../services/anuncio.service';
+import { pedidoNaoSaiu, registrarFalhaHttp, sessaoInvalida } from '../services/conexao.service';
 import { AuthService } from '../services/auth.service';
 import { FilaPublicacaoService } from '../services/fila-publicacao.service';
 import { LocalidadesService } from '../services/localidades.service';
@@ -310,10 +311,6 @@ export class PublicarPage implements OnInit, OnDestroy {
     };
     const novas = this.imagens.flatMap(foto => (foto.arquivo ? [foto.arquivo] : []));
     const podeEsperarSinal = !this.editando && this.fila.disponivel;
-    if (podeEsperarSinal && !navigator.onLine) {
-      await this.guardarNaFila(dados, novas, false);
-      return;
-    }
 
     this.atualizar(() => {
       this.enviando = true;
@@ -335,7 +332,8 @@ export class PublicarPage implements OnInit, OnDestroy {
         this.zone.run(() => void this.router.navigate(['/tabs/tab1/anuncio', criado.id]));
       }
     } catch (erro) {
-      const semSinal = (erro instanceof HttpErrorResponse && erro.status === 0) || !navigator.onLine;
+      registrarFalhaHttp('publicar', erro);
+      const semSinal = pedidoNaoSaiu(erro);
       if (limiteDeAnunciosAtingido(erro)) {
         // O formulário e as fotos ficam: virando PRO (ou vendendo um lote), é só tocar em publicar de novo.
         await this.exibirPaywallPro();
@@ -495,8 +493,14 @@ export class PublicarPage implements OnInit, OnDestroy {
         this.imagens = anuncio.fotos.map(url => ({ url }));
         this.carregandoAnuncio = false;
       });
-    } catch {
-      await this.avisar('Não foi possível carregar o anúncio. Confira sua conexão.', 'danger');
+    } catch (erro) {
+      registrarFalhaHttp('carregar-anuncio', erro);
+      await this.avisar(
+        pedidoNaoSaiu(erro)
+          ? 'Sem internet. Não deu para abrir o anúncio.'
+          : 'Não foi possível carregar o anúncio. Tente de novo.',
+        'danger'
+      );
       this.voltarParaConta();
     }
   }
@@ -507,12 +511,12 @@ export class PublicarPage implements OnInit, OnDestroy {
 
   private async tratarErro(erro: unknown): Promise<void> {
     const status = erro instanceof HttpErrorResponse ? erro.status : -1;
-    if (status === 0 || !navigator.onLine) {
+    if (pedidoNaoSaiu(erro)) {
       await this.avisar(
         'Sem internet. Seus dados e fotos continuam aqui: toque em publicar de novo quando tiver sinal.',
         'warning'
       );
-    } else if (status === 401 || status === 403) {
+    } else if (sessaoInvalida(erro)) {
       this.auth.sair();
       await this.avisar('Sua sessão expirou. Toque em salvar para entrar de novo.', 'warning');
     } else if (status === 428) {

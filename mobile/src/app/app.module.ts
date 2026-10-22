@@ -1,4 +1,4 @@
-import { provideHttpClient } from '@angular/common/http';
+import { HttpBackend, provideHttpClient } from '@angular/common/http';
 import { LOCALE_ID, NgModule, provideZoneChangeDetection } from '@angular/core';
 import { BrowserModule } from '@angular/platform-browser';
 import { RouteReuseStrategy } from '@angular/router';
@@ -9,6 +9,7 @@ import { IonicModule, IonicRouteStrategy } from '@ionic/angular/lazy';
 
 import { AppRoutingModule } from './app-routing.module';
 import { AppComponent } from './app.component';
+import { CapacitorHttpBackend } from './services/capacitor-http.backend';
 import { SharedModule } from './shared/shared.module';
 
 registerLocaleData(localePt);
@@ -21,6 +22,8 @@ registerLocaleData(localePt);
     { provide: LOCALE_ID, useValue: 'pt-BR' },
     provideZoneChangeDetection(),
     provideHttpClient(),
+    CapacitorHttpBackend,
+    { provide: HttpBackend, useExisting: CapacitorHttpBackend },
   ],
   bootstrap: [AppComponent],
 })

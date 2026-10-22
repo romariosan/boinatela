@@ -1,10 +1,10 @@
-import { HttpErrorResponse } from '@angular/common/http';
 import { ChangeDetectorRef, Component, NgZone } from '@angular/core';
 import { Router } from '@angular/router';
 import { RefresherCustomEvent } from '@ionic/angular/lazy';
 import { Observable } from 'rxjs';
 import { Anuncio, CategoriaAnimal, CategoriaEstoque, ROTULOS } from '../models/anuncio';
 import { AnuncioService } from '../services/anuncio.service';
+import { pedidoNaoSaiu, registrarFalhaHttp } from '../services/conexao.service';
 import { AtalhoBuscaService } from '../services/atalho-busca.service';
 import { TemaService } from '../services/tema.service';
 
@@ -81,7 +81,8 @@ export class Tab1Page {
       });
       this.salvarCache(anuncios, categorias);
     } catch (erro) {
-      const semConexao = !navigator.onLine || (erro instanceof HttpErrorResponse && erro.status === 0);
+      registrarFalhaHttp('vitrine', erro);
+      const semConexao = pedidoNaoSaiu(erro);
       this.atualizar(() => {
         this.falha = semConexao ? 'sem-conexao' : 'servidor';
         this.carregando = false;

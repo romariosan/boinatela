@@ -1,4 +1,5 @@
 import { Component } from '@angular/core';
+import { Router } from '@angular/router';
 import { addIcons } from 'ionicons';
 import {
   add,
@@ -34,6 +35,7 @@ import {
   trashOutline,
 } from 'ionicons/icons';
 import { Observable } from 'rxjs';
+import { aplicativoInstalado } from './landing/abrir-vitrine-no-aplicativo.guard';
 import { ConexaoService } from './services/conexao.service';
 import { FilaPublicacaoService } from './services/fila-publicacao.service';
 import { TemaService } from './services/tema.service';
@@ -48,9 +50,13 @@ export class AppComponent {
   readonly online$: Observable<boolean>;
 
   // TemaService entra aqui só para aplicar o modo sol salvo antes da primeira tela.
-  constructor(conexao: ConexaoService, _tema: TemaService, fila: FilaPublicacaoService) {
+  constructor(conexao: ConexaoService, _tema: TemaService, fila: FilaPublicacaoService, router: Router) {
     this.online$ = conexao.online$;
     fila.iniciar();
+    const caminho = window.location.pathname;
+    if (aplicativoInstalado() && (caminho === '/' || caminho === '/index.html')) {
+      void router.navigateByUrl('/tabs/tab1', { replaceUrl: true });
+    }
     addIcons({
       add,
       storefrontOutline,

@@ -16,7 +16,7 @@ app:
     # Mínimo de 32 caracteres (HS256).
     secret: ${JWT_SECRET}
   cors:
-    # Site oficial + app nativo (Capacitor: https://localhost no Android, capacitor://localhost no iOS).
-    allowed-origins: ${CORS_ALLOWED_ORIGINS:https://appcompregado.com.br,https://www.appcompregado.com.br,https://localhost,capacitor://localhost}
+    # Site oficial + app nativo (WebView Android em https://compregado.local, capacitor://localhost no iOS).
+    allowed-origins: ${CORS_ALLOWED_ORIGINS:https://appcompregado.com.br,https://www.appcompregado.com.br,https://localhost,https://compregado.local,capacitor://localhost}
   whatsapp:
     envio-no-log: false

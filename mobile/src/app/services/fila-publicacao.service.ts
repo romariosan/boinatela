@@ -6,7 +6,7 @@ import { BehaviorSubject, Observable, Subject, combineLatest, filter, interval }
 import { Anuncio, NovoAnuncio } from '../models/anuncio';
 import { AnuncioService } from './anuncio.service';
 import { AuthService } from './auth.service';
-import { ConexaoService } from './conexao.service';
+import { ConexaoService, pedidoNaoSaiu, registrarFalhaHttp } from './conexao.service';
 import { PlanoProService, limiteDeAnunciosAtingido } from './plano-pro.service';
 
 const BANCO = 'compregado';
@@ -123,7 +123,7 @@ export class FilaPublicacaoService {
 
   async processar(): Promise<void> {
     const usuario = this.auth.snapshot;
-    if (this.processando || !usuario?.token || !navigator.onLine || !this.disponivel) {
+    if (this.processando || !usuario?.token || !this.disponivel) {
       return;
     }
     this.processando = true;
@@ -165,6 +165,7 @@ export class FilaPublicacaoService {
       await this.avisarPublicado(criado);
       return true;
     } catch (erro) {
+      registrarFalhaHttp('fila-publicacao', erro);
       if (limiteDeAnunciosAtingido(erro)) {
         // Fica guardado sem nova tentativa automática: o vendedor decide (virar PRO ou vender um lote).
         item.erro = 'Limite de 3 anúncios grátis atingido. Marque um anúncio como vendido ou vire Vendedor PRO e toque em tentar de novo.';
@@ -173,7 +174,7 @@ export class FilaPublicacaoService {
         return true;
       }
       const status = erro instanceof HttpErrorResponse ? erro.status : -1;
-      if (status === 0) {
+      if (pedidoNaoSaiu(erro)) {
         item.envioInterrompido = true;
         await this.gravar(item);
         return false;

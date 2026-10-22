@@ -13,6 +13,7 @@ import {
   resumoLote,
 } from '../models/anuncio';
 import { AnuncioService } from '../services/anuncio.service';
+import { pedidoNaoSaiu, registrarFalhaHttp, sessaoInvalida } from '../services/conexao.service';
 import { AuthService } from '../services/auth.service';
 import { FilaPublicacaoService, PublicacaoPendente } from '../services/fila-publicacao.service';
 import { PlanoProService, limiteDeAnunciosAtingido } from '../services/plano-pro.service';
@@ -186,10 +187,6 @@ export class Tab3Page implements OnInit {
   }
 
   async tentarPublicarAgora(id: string): Promise<void> {
-    if (!navigator.onLine) {
-      await this.avisar('Ainda sem internet. Ele sai sozinho quando o sinal voltar.', 'warning');
-      return;
-    }
     await this.fila.tentarDeNovo(id);
   }
 
@@ -262,13 +259,13 @@ export class Tab3Page implements OnInit {
         this.carregandoAnuncios = false;
       });
     } catch (erro) {
-      const status = erro instanceof HttpErrorResponse ? erro.status : 0;
-      const semConexao = status === 0 || !navigator.onLine;
+      registrarFalhaHttp('meus-anuncios', erro);
+      const semConexao = pedidoNaoSaiu(erro);
       this.atualizar(() => {
         this.carregandoAnuncios = false;
         this.falhaAnuncios = semConexao ? 'sem-conexao' : 'servidor';
       });
-      if (status === 401 || status === 403) {
+      if (sessaoInvalida(erro)) {
         this.auth.sair();
         await this.avisar('Sua sessão expirou. Entre de novo.', 'warning');
       } else if (this.meusAnuncios.length) {
@@ -281,15 +278,18 @@ export class Tab3Page implements OnInit {
   }
 
   private async tratarErroAcao(erro: unknown, anuncioId: number): Promise<void> {
-    const status = erro instanceof HttpErrorResponse ? erro.status : 0;
-    if (status === 401 || status === 403) {
+    registrarFalhaHttp('acao-anuncio', erro);
+    const status = erro instanceof HttpErrorResponse ? erro.status : -1;
+    if (sessaoInvalida(erro)) {
       this.auth.sair();
       await this.avisar('Sua sessão expirou. Entre de novo.', 'warning');
     } else if (status === 404) {
       this.atualizar(() => (this.meusAnuncios = this.meusAnuncios.filter(item => item.id !== anuncioId)));
       await this.avisar('Este anúncio já não existe.', 'warning');
+    } else if (pedidoNaoSaiu(erro)) {
+      await this.avisar('Sem internet. Tente de novo quando tiver sinal.', 'warning');
     } else {
-      await this.avisar('Não foi possível concluir. Verifique a conexão e tente de novo.', 'danger');
+      await this.avisar('Não foi possível concluir. Tente de novo.', 'danger');
     }
   }
 

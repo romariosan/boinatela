@@ -4,6 +4,7 @@ import { AbstractControl, FormControl, FormGroup, ValidationErrors, Validators }
 import { LoadingController, NavController, ToastController } from '@ionic/angular/lazy';
 import { Subscription } from 'rxjs';
 import { AuthService, MINIMO_SENHA } from '../services/auth.service';
+import { pedidoNaoSaiu, registrarFalhaHttp } from '../services/conexao.service';
 
 /**
  * Regras entre campos ficam no próprio controle (e não no grupo): o Ionic pinta o campo de vermelho a
@@ -136,6 +137,7 @@ export class AlterarSenhaPage implements OnDestroy {
   }
 
   private async tratarErro(erro: unknown): Promise<void> {
+    registrarFalhaHttp('alterar-senha', erro);
     const status = erro instanceof HttpErrorResponse ? erro.status : -1;
     const corpo = erro instanceof HttpErrorResponse ? erro.error : null;
     if (status === 422) {
@@ -162,7 +164,7 @@ export class AlterarSenhaPage implements OnDestroy {
       this.auth.sair();
       await this.avisar('Sua sessão expirou. Entre de novo para alterar a senha.', 'warning');
       await this.navCtrl.navigateBack('/tabs/tab3');
-    } else if (status === 0 || !navigator.onLine) {
+    } else if (pedidoNaoSaiu(erro)) {
       await this.avisar('Sem internet. Sua senha não foi alterada; tente de novo quando tiver sinal.', 'warning');
     } else {
       await this.avisar('Não foi possível alterar a senha agora. Tente de novo em instantes.', 'danger');

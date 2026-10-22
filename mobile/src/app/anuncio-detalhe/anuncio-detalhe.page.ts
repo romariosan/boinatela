@@ -14,6 +14,7 @@ import {
   unidadePreco,
 } from '../models/anuncio';
 import { AnuncioService } from '../services/anuncio.service';
+import { pedidoNaoSaiu, registrarFalhaHttp } from '../services/conexao.service';
 import { AuthService } from '../services/auth.service';
 
 type FalhaDetalhe = 'nao-encontrado' | 'sem-conexao' | 'servidor';
@@ -116,16 +117,23 @@ export class AnuncioDetalhePage {
         void this.perguntarMarcarVendido();
       }
     } catch (erro) {
+      registrarFalhaHttp('detalhe', erro);
       const status = erro instanceof HttpErrorResponse ? erro.status : -1;
       this.atualizar(() => {
         this.carregando = false;
-        this.falha = status === 404 ? 'nao-encontrado' : status === 0 || !navigator.onLine ? 'sem-conexao' : 'servidor';
+        this.falha = status === 404 ? 'nao-encontrado' : pedidoNaoSaiu(erro) ? 'sem-conexao' : 'servidor';
       });
     }
   }
 
   async falarComVendedor(): Promise<void> {
     if (!this.anuncio || this.abrindoContato || this.loteVendido) {
+      return;
+    }
+    const whatsapp = this.auth.snapshot?.whatsapp ?? '';
+    if (this.auth.logado && whatsapp.replace(/\D/g, '').length >= 10) {
+      this.telefoneContato = whatsapp;
+      await this.irParaWhatsapp();
       return;
     }
     this.telefoneContato = '';
@@ -150,13 +158,14 @@ export class AnuncioDetalhePage {
       this.modalContato = false;
       window.open(contato.urlWhatsapp, '_blank');
     } catch (erro) {
+      registrarFalhaHttp('contato-vendedor', erro);
       const status = erro instanceof HttpErrorResponse ? erro.status : -1;
       const mensagem =
         status === 409
           ? 'Este anúncio não está mais disponível.'
           : status === 400
             ? 'Informe um WhatsApp de celular com DDD.'
-            : status === 0 || !navigator.onLine
+            : pedidoNaoSaiu(erro)
               ? 'Sem internet. Tente de novo quando tiver sinal.'
               : 'Não foi possível abrir o WhatsApp do vendedor. Tente de novo.';
       await this.avisar(mensagem, status === 409 ? 'warning' : 'danger');

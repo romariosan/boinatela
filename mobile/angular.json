@@ -78,6 +78,9 @@
         },
         "serve": {
           "builder": "@angular/build:dev-server",
+          "options": {
+            "proxyConfig": "proxy.conf.js"
+          },
           "configurations": {
             "production": {
               "buildTarget": "app:build:production"
@@ -125,7 +128,8 @@
   "cli": {
     "schematicCollections": [
       "@ionic/angular-toolkit"
-    ]
+    ],
+    "analytics": "3ae85390-a154-4402-b41a-a817a63dbd45"
   },
   "schematics": {
     "@ionic/angular-toolkit:component": {
