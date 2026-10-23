@@ -146,6 +146,14 @@ export class CapacitorHttpBackend implements HttpBackend {
         headers[nome] = valores.join(', ');
       }
     }
+    // O XhrBackend faz isso sozinho. Sem o header, o plugin Android grava o POST como
+    // application/x-www-form-urlencoded e a API responde 415. O login cai no toast genérico.
+    if (!ignorarContentType && !Object.keys(headers).some(nome => nome.toLowerCase() === 'content-type')) {
+      const detectado = req.detectContentTypeHeader();
+      if (detectado) {
+        headers['Content-Type'] = detectado;
+      }
+    }
     return headers;
   }
 }
