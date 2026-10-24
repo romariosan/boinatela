@@ -20,7 +20,7 @@ Ele não entra em grupo. Fala só no privado, com o número de quem postou o lot
 
 Ele pergunta à API, de tempos em tempos: “tem mensagem para eu enviar?”. Se tiver, manda uma. Enquanto essa não termina, não pega outra. Quando o produtor responde, o Consultor entrega essa resposta para a API e espera o próximo texto.
 
-A primeira frase sempre diz que é a equipe do CompreGado, em Formosa. O link do lote só sai depois que o produtor aceita ver.
+A primeira frase sempre diz que é a equipe do CompreGado. A cidade que aparece é a do lote: Formosa, Cabeceiras, Cristalina ou outra que veio no anúncio. O link só sai depois que o produtor aceita ver.
 
 ### Chip Sistema — o porteiro
 
@@ -30,7 +30,7 @@ Ele manda código de verificação, aviso de senha e os alertas da conta. É o n
 
 ## A manhã em que o lote aparece
 
-Imagine o grupo “Pecuária Formosa”. Alguém escreve que tem 30 novilhas Nelore e manda foto.
+Imagine um grupo de Cabeceiras, de Cristalina ou de Formosa. Alguém escreve que tem 30 novilhas Nelore e manda foto. A cidade que a API guarda nesse anúncio é a que a frase vai usar.
 
 1. O **Radar** vê a mensagem e entrega para a API.
 2. A API guarda o anúncio na vitrine. A Gemini só ajuda a preencher os dados. O texto da conversa ela não escreve nessa hora.
@@ -45,11 +45,21 @@ Se a pessoa já tinha outra conversa em aberto, a frase não se apresenta de nov
 
 No horário marcado, o **Consultor** pega a mensagem e envia. Só então o estado vira **quebra-gelo enviado**.
 
-A frase é desta família:
+A frase muda só a cidade. O resto é o mesmo.
+
+Em Cristalina:
 
 > Boa tarde. Aqui é da equipe do CompreGado. Vi seu lote de 30 Nelore em Cristalina, no grupo Pecuária Cristalina. Ainda tá na mão?
 
-A cidade é a do lote. Em Cabeceiras a frase diz “em Cabeceiras”. Em Formosa, “em Formosa”. Se a cidade não veio no anúncio, ela não inventa o lugar.
+Em Cabeceiras:
+
+> Boa tarde. Aqui é da equipe do CompreGado. Vi seu lote de 30 Nelore em Cabeceiras, no grupo Pecuária Cabeceiras. Ainda tá na mão?
+
+Em Formosa:
+
+> Boa tarde. Aqui é da equipe do CompreGado. Vi seu lote de 30 Nelore em Formosa, no grupo Pecuária Formosa. Ainda tá na mão?
+
+O “GO” do cadastro não entra na fala. Se a cidade não veio no anúncio, a frase não inventa Formosa: fala só do grupo.
 
 Sem link. Sem cargo. Sem palavra de empresa vazia.
 
@@ -74,7 +84,9 @@ Se ele responder **enquanto a primeira mensagem ainda está na fila**, essa mens
 
 No dia seguinte, em horário comercial, vai **uma** segunda mensagem:
 
-> Aqui é do CompreGado de novo, sobre as 30 Nelore do grupo Pecuária Formosa. Se não quiser o anúncio no ar, é só falar que eu tiro.
+> Aqui é do CompreGado de novo, sobre as 30 Nelore do grupo Pecuária Cristalina. Se não quiser o anúncio no ar, é só falar que eu tiro.
+
+O grupo citado é o mesmo da primeira frase. Se o lote era de Cabeceiras, essa segunda mensagem fala do grupo de Cabeceiras.
 
 Não há terceira. Silêncio depois disso é não.
 
