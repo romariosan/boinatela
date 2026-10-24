@@ -1,5 +1,6 @@
 package br.com.appcompregado.service;
 
+import br.com.appcompregado.domain.LeadConversa;
 import br.com.appcompregado.domain.MensagemSaida;
 import br.com.appcompregado.domain.enums.ChipMensagem;
 import br.com.appcompregado.domain.enums.StatusMensagem;
@@ -27,6 +28,17 @@ public class FilaMensagemService {
 
     @Transactional
     public void enfileirar(ChipMensagem chip, String telefone, String texto, Duration validade) {
+        enfileirar(chip, telefone, texto, validade, null, null);
+    }
+
+    @Transactional
+    public void enfileirar(
+            ChipMensagem chip,
+            String telefone,
+            String texto,
+            Duration validade,
+            LocalDateTime dataAgendamento,
+            LeadConversa lead) {
         String numero = PhoneUtils.normalizar(telefone);
         if (!PhoneUtils.celularBrasileiro(numero)) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Informe um celular com DDD.");
@@ -42,40 +54,65 @@ public class FilaMensagemService {
         mensagem.setStatus(StatusMensagem.PENDENTE);
         mensagem.setCriadaEm(agora);
         mensagem.setExpiraEm(agora.plus(validade));
+        mensagem.setDataAgendamento(dataAgendamento);
+        mensagem.setLead(lead);
         mensagens.save(mensagem);
     }
 
+    /** Marca as pendências vencidas como reservadas. A mesma linha não volta no próximo GET. */
     @Transactional
-    public List<MensagemSaida> pendentes(ChipMensagem chip) {
-        mensagens.expirarPendentes(LocalDateTime.now());
+    public List<MensagemSaida> reservar(ChipMensagem chip) {
         LocalDateTime agora = LocalDateTime.now();
+        mensagens.expirarPendentes(agora);
         PageRequest pagina = PageRequest.of(0, LIMITE);
-        if (chip == null) {
-            return mensagens.findByStatusAndExpiraEmAfterOrderByIdAsc(StatusMensagem.PENDENTE, agora, pagina);
+        List<MensagemSaida> lote = chip == null
+                ? mensagens.reservaveis(agora, pagina)
+                : mensagens.reservaveisDoChip(chip, agora, pagina);
+        for (MensagemSaida mensagem : lote) {
+            mensagem.setStatus(StatusMensagem.RESERVADA);
         }
-        return mensagens.findByStatusAndChipAndExpiraEmAfterOrderByIdAsc(
-                StatusMensagem.PENDENTE, chip, agora, pagina);
+        return lote;
     }
 
     @Transactional
-    public void marcarEnviada(Long id) {
+    public EnvioConfirmado marcarEnviada(Long id) {
         MensagemSaida mensagem = aberta(id);
         mensagem.setStatus(StatusMensagem.ENVIADA);
         mensagem.setEnviadaEm(LocalDateTime.now());
+        Long leadId = mensagem.getLead() == null ? null : mensagem.getLead().getId();
+        return new EnvioConfirmado(mensagem.getId(), leadId, mensagem.getTexto());
+    }
+
+    /** Devolve a reserva para PENDENTE. Não marca a abordagem como feita. */
+    @Transactional
+    public void marcarFalha(Long id) {
+        MensagemSaida mensagem = mensagens.findById(id)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND));
+        if (mensagem.getStatus() == StatusMensagem.ENVIADA || mensagem.getStatus() == StatusMensagem.EXPIRADA) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT, "Mensagem já encerrada.");
+        }
+        mensagem.setStatus(StatusMensagem.PENDENTE);
     }
 
     @Transactional
-    public void marcarFalha(Long id) {
-        MensagemSaida mensagem = aberta(id);
-        mensagem.setStatus(StatusMensagem.FALHOU);
+    public void cancelarPendentesDaConversa(Long leadId) {
+        mensagens.cancelarDaConversa(leadId);
+    }
+
+    @Transactional
+    public void cancelarConsultorPendente(String telefone) {
+        mensagens.cancelarConsultor(PhoneUtils.normalizar(telefone));
     }
 
     private MensagemSaida aberta(Long id) {
         MensagemSaida mensagem = mensagens.findById(id)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND));
-        if (mensagem.getStatus() != StatusMensagem.PENDENTE) {
+        if (mensagem.getStatus() != StatusMensagem.PENDENTE && mensagem.getStatus() != StatusMensagem.RESERVADA) {
             throw new ResponseStatusException(HttpStatus.CONFLICT, "Mensagem já encerrada.");
         }
         return mensagem;
+    }
+
+    public record EnvioConfirmado(Long mensagemId, Long leadId, String texto) {
     }
 }

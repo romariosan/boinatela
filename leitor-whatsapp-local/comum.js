@@ -43,6 +43,7 @@ function iniciar(nome) {
   const png = path.join(__dirname, `qr-${nome}.png`);
   const html = path.join(__dirname, `qr-${nome}.html`);
   let paginaAberta = false;
+  let ocupado = false;
   process.title = papel.titulo;
 
   function log(cor, texto) {
@@ -88,6 +89,9 @@ function iniciar(nome) {
     if (papel.envia.length) {
       log(VERDE, `[CONECTADO] Fila ${papel.envia.join(', ')} a cada 3s.`);
       setInterval(() => {
+        if (ocupado) {
+          return;
+        }
         buscarFila().catch((erro) => log(VERMELHO, `[FILA] ${erro.message}`));
       }, 3000);
     } else {
@@ -111,6 +115,12 @@ function iniciar(nome) {
     const deGrupo = String(msg.from || '').endsWith('@g.us');
     const numero = String(msg.from || '').split('@')[0];
     log(RESET, `[MENSAGEM] De: ${numero}, Texto: ${msg.body || ''}`);
+    if (!deGrupo && nome === 'consultor') {
+      if (!msg.fromMe) {
+        publicarEntrada(msg).catch((erro) => log(VERMELHO, `[ENTRADA] ${erro.message}`));
+      }
+      return;
+    }
     if (!deGrupo || !papel.escutaGrupo) {
       if (deGrupo) {
         log(AMARELO, '[GRUPO] Este chip nao escuta grupo. Tire este numero dos grupos.');
@@ -197,10 +207,40 @@ function iniciar(nome) {
     log(resposta.ok ? VERDE : VERMELHO, `[RADAR] HTTP ${resposta.status} grupo ${grupoNome || msg.from}`);
   }
 
-  async function buscarFila() {
+  async function publicarEntrada(msg) {
     if (!ROBO) {
       return;
     }
+    const texto = msg.body || '';
+    if (!texto) {
+      return;
+    }
+    const telefone = String(msg.from || '').split('@')[0];
+    const mensagemId = msg.id && msg.id.id ? msg.id.id : '';
+    const resposta = await fetch(`${API}/api/robo/entrada`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'X-Robo-Token': ROBO,
+      },
+      body: JSON.stringify({ telefone, texto, mensagemId }),
+    });
+    log(resposta.ok ? VERDE : VERMELHO, `[ENTRADA] HTTP ${resposta.status}`);
+  }
+
+  async function buscarFila() {
+    if (ocupado || !ROBO) {
+      return;
+    }
+    ocupado = true;
+    try {
+      await drenarFila();
+    } finally {
+      ocupado = false;
+    }
+  }
+
+  async function drenarFila() {
     for (const chip of papel.envia) {
       const resposta = await fetch(`${API}/api/robo/fila?chip=${encodeURIComponent(chip)}`, {
         headers: { 'X-Robo-Token': ROBO },
@@ -221,6 +261,7 @@ function iniciar(nome) {
   async function enviarItem(item) {
     const digitos = String(item.numero || '').replace(/\D/g, '');
     if (!digitos || digitos.endsWith('@g.us')) {
+      await marcarFalha(item.id);
       log(VERMELHO, `[FILA] Recusei envio para grupo: ${item.numero}`);
       return;
     }

@@ -28,7 +28,7 @@ import org.slf4j.LoggerFactory;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.support.TransactionTemplate;
 
 /** Chip 2: só grava. Não responde no grupo. */
 @Service
@@ -45,6 +45,8 @@ public class ScraperAnuncioService {
     private final AlertaNotificador radar;
     private final GrupoWhatsappService grupos;
     private final ArmazenamentoLocalService armazenamento;
+    private final LeadAbordagemService abordagem;
+    private final TransactionTemplate transacao;
 
     public ScraperAnuncioService(
             AnuncioRepository anuncios,
@@ -53,7 +55,9 @@ public class ScraperAnuncioService {
             PasswordEncoder passwordEncoder,
             AlertaNotificador radar,
             GrupoWhatsappService grupos,
-            ArmazenamentoLocalService armazenamento) {
+            ArmazenamentoLocalService armazenamento,
+            LeadAbordagemService abordagem,
+            TransactionTemplate transacao) {
         this.anuncios = anuncios;
         this.usuarios = usuarios;
         this.gemini = gemini;
@@ -61,44 +65,69 @@ public class ScraperAnuncioService {
         this.radar = radar;
         this.grupos = grupos;
         this.armazenamento = armazenamento;
+        this.abordagem = abordagem;
+        this.transacao = transacao;
     }
 
-    @Transactional
     public ResultadoCaptura ingerir(JsonNode corpo) {
+        Preparo preparo = preparar(corpo);
+        if (preparo.recusa() != null) {
+            return preparo.recusa();
+        }
+        ExtracaoAnuncio extraido = preparo.texto().isBlank()
+                ? null
+                : gemini.extrair(preparo.texto(), preparo.cidadePadrao(), preparo.ufPadrao()).orElse(null);
+        ExtracaoAnuncio lido = extraido;
+        ResultadoCaptura gravado = transacao.execute(status -> gravar(preparo, lido));
+        return gravado == null ? ResultadoCaptura.recusado("falha ao gravar") : gravado;
+    }
+
+    private Preparo preparar(JsonNode corpo) {
         if (corpo == null || corpo.isNull()) {
-            return ResultadoCaptura.recusado("corpo vazio");
+            return Preparo.recusa("corpo vazio");
         }
         JsonNode data = corpo.has("data") ? corpo.get("data") : corpo;
         if (data.path("key").path("fromMe").asBoolean(false)) {
-            return ResultadoCaptura.recusado("mensagem do próprio chip");
+            return Preparo.recusa("mensagem do próprio chip");
         }
         if (data.has("key") && !data.path("key").path("remoteJid").asText("").endsWith("@g.us")) {
-            return ResultadoCaptura.recusado("não é mensagem de grupo");
+            return Preparo.recusa("não é mensagem de grupo");
         }
 
         String texto = textoDaMensagem(data, corpo);
         if (texto.isBlank() && !temMidia(data, corpo)) {
-            return ResultadoCaptura.recusado("sem texto");
+            return Preparo.recusa("sem texto");
         }
         Long timestamp = timestampDe(data, corpo);
         if (!recente(timestamp, Instant.now())) {
-            return ResultadoCaptura.recusado("mensagem com mais de 10 minutos");
+            return Preparo.recusa("mensagem com mais de 10 minutos");
         }
 
         String remetente = remetenteDe(data, corpo);
         String telefoneRemetente = PhoneUtils.normalizar(remetente);
         if (!PhoneUtils.celularBrasileiro(telefoneRemetente)) {
-            return ResultadoCaptura.recusado("remetente sem celular válido");
+            return Preparo.recusa("remetente sem celular válido");
         }
 
         String jid = jidDoGrupo(data, corpo);
         GrupoWhatsapp grupo = grupos.resolver(jid, nomeDoGrupo(data, corpo));
-        String textoCompleto = texto.isBlank() ? "" : texto;
-        ExtracaoAnuncio extraido = textoCompleto.isBlank()
-                ? null
-                : gemini.extrair(textoCompleto, grupo.getCidadePadrao(), grupo.getUfPadrao()).orElse(null);
+        return new Preparo(
+                null,
+                data,
+                corpo,
+                texto.isBlank() ? "" : texto,
+                telefoneRemetente,
+                grupo.getCidadePadrao(),
+                grupo.getUfPadrao(),
+                grupo.getNomeGrupo());
+    }
+
+    private ResultadoCaptura gravar(Preparo preparo, ExtracaoAnuncio extraido) {
+        JsonNode data = preparo.data();
+        JsonNode corpo = preparo.corpo();
+        String textoCompleto = preparo.texto();
         String telefoneCurado = telefoneDaCuradoria(extraido, textoCompleto);
-        String telefone = telefoneCurado == null ? telefoneRemetente : telefoneCurado;
+        String telefone = telefoneCurado == null ? preparo.telefoneRemetente() : telefoneCurado;
         String origem = telefoneCurado == null ? "WHATSAPP" : "FACEBOOK";
 
         Optional<Anuncio> repetido = anuncios
@@ -117,14 +146,14 @@ public class ScraperAnuncioService {
             anuncio.setPreco(BigDecimal.ZERO);
             anuncio.setRaca(Raca.OUTRA);
             anuncio.setQuantidade(null);
-            anuncio.setCidade(grupo.getCidadePadrao() + " - " + grupo.getUfPadrao());
+            anuncio.setCidade(preparo.cidadePadrao() + " - " + preparo.ufPadrao());
             log.info("Captura sem Gemini: anúncio gravado com o texto original.");
         } else {
             anuncio.setTitulo(limitar(extraido.titulo(), 180));
             anuncio.setPreco(precoOuZero(extraido.preco()));
             anuncio.setRaca(extraido.raca() == null ? Raca.OUTRA : extraido.raca());
             anuncio.setQuantidade(extraido.quantidade());
-            anuncio.setCidade(montarCidade(extraido.cidade(), extraido.uf(), grupo));
+            anuncio.setCidade(montarCidade(extraido.cidade(), extraido.uf(), preparo.cidadePadrao(), preparo.ufPadrao()));
         }
         anuncio.setDescricao(descricao);
         anuncio.setCategoriaAnimal(categoriaDe(descricao));
@@ -158,7 +187,25 @@ public class ScraperAnuncioService {
         if (anuncio.getStatusProcessamento() == StatusProcessamento.PUBLICADO) {
             radar.agendar(anuncio);
         }
+        if (extraido != null && PhoneUtils.celularBrasileiro(telefone)) {
+            abordagem.agendarEstreia(anuncio, preparo.nomeGrupo());
+        }
         return new ResultadoCaptura(true, null, anuncio.getId());
+    }
+
+    private record Preparo(
+            ResultadoCaptura recusa,
+            JsonNode data,
+            JsonNode corpo,
+            String texto,
+            String telefoneRemetente,
+            String cidadePadrao,
+            String ufPadrao,
+            String nomeGrupo) {
+
+        static Preparo recusa(String motivo) {
+            return new Preparo(ResultadoCaptura.recusado(motivo), null, null, "", "", "", "", "");
+        }
     }
 
     /**
@@ -207,9 +254,9 @@ public class ScraperAnuncioService {
         return limitar(corpo, 4000);
     }
 
-    private static String montarCidade(String cidade, String uf, GrupoWhatsapp grupo) {
-        String nome = cidade == null || cidade.isBlank() ? grupo.getCidadePadrao() : cidade.trim();
-        String sigla = uf == null || !uf.matches("(?i)[a-z]{2}") ? grupo.getUfPadrao() : uf.trim().toUpperCase(Locale.ROOT);
+    private static String montarCidade(String cidade, String uf, String cidadePadrao, String ufPadrao) {
+        String nome = cidade == null || cidade.isBlank() ? cidadePadrao : cidade.trim();
+        String sigla = uf == null || !uf.matches("(?i)[a-z]{2}") ? ufPadrao : uf.trim().toUpperCase(Locale.ROOT);
         if (nome.matches("(?i).* - [a-z]{2}$")) {
             return nome.substring(0, nome.length() - 5).trim() + " - " + nome.substring(nome.length() - 2).toUpperCase(Locale.ROOT);
         }

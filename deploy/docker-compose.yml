@@ -161,6 +161,7 @@ services:
       WHATSAPP_WEBHOOK_TOKEN: ${WHATSAPP_WEBHOOK_TOKEN:?defina WHATSAPP_WEBHOOK_TOKEN no .env}
       ROBO_TOKEN: ${ROBO_TOKEN:?defina ROBO_TOKEN no .env}
       WHATSAPP_BOT_NUMERO: ${WHATSAPP_BOT_NUMERO:-}
+      GEMINI_API_KEY: ${GEMINI_API_KEY:-}
     # Só no loopback: o Nginx da própria VPS é o único cliente.
     ports:
       - "127.0.0.1:${API_PORT:-8080}:8080"

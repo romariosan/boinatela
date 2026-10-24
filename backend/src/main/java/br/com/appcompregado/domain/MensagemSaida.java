@@ -6,11 +6,16 @@ import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.EnumType;
 import jakarta.persistence.Enumerated;
+import jakarta.persistence.FetchType;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
+import jakarta.persistence.JoinColumn;
+import jakarta.persistence.ManyToOne;
 import jakarta.persistence.Table;
 import java.time.LocalDateTime;
+import org.hibernate.annotations.OnDelete;
+import org.hibernate.annotations.OnDeleteAction;
 
 /** Pedido para o robô local enviar uma mensagem de WhatsApp. */
 @Entity
@@ -40,6 +45,15 @@ public class MensagemSaida {
 
     @Column(nullable = false)
     private LocalDateTime expiraEm;
+
+    /** Nulo: pode sair agora (código, clique, retenção). Preenchido: só depois desse horário. */
+    private LocalDateTime dataAgendamento;
+
+    /** Nulo em código, clique e retenção. A abordagem do produtor aponta a conversa. */
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "lead_conversa_id")
+    @OnDelete(action = OnDeleteAction.SET_NULL)
+    private LeadConversa lead;
 
     private LocalDateTime enviadaEm;
 
@@ -101,5 +115,21 @@ public class MensagemSaida {
 
     public void setEnviadaEm(LocalDateTime enviadaEm) {
         this.enviadaEm = enviadaEm;
+    }
+
+    public LocalDateTime getDataAgendamento() {
+        return dataAgendamento;
+    }
+
+    public void setDataAgendamento(LocalDateTime dataAgendamento) {
+        this.dataAgendamento = dataAgendamento;
+    }
+
+    public LeadConversa getLead() {
+        return lead;
+    }
+
+    public void setLead(LeadConversa lead) {
+        this.lead = lead;
     }
 }

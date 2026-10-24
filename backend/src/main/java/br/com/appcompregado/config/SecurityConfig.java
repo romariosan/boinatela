@@ -44,6 +44,7 @@ public class SecurityConfig {
                                 .authenticated()
                         .requestMatchers("/api/auth/**").permitAll()
                         .requestMatchers(HttpMethod.GET, "/api/robo/fila").permitAll()
+                        .requestMatchers(HttpMethod.POST, "/api/robo/entrada").permitAll()
                         .requestMatchers(HttpMethod.POST, "/api/robo/fila/*/enviada", "/api/robo/fila/*/falhou").permitAll()
                         .requestMatchers(HttpMethod.POST,
                                 "/api/webhook/whatsapp-scraper",

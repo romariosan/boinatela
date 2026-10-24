@@ -50,7 +50,7 @@ compregado:
       number: ${COMPREGADO_WHATSAPP_CONSULTANT_NUMBER:5561994044146}
       instance: ${COMPREGADO_WHATSAPP_CONSULTANT_INSTANCE:compregado-consultant}
   consultor:
-    # A cada minuto, pega o que completou 30 minutos. "-" desliga.
+    # A cada minuto, o lembrete de quem não respondeu a quebra de gelo. "-" desliga.
     cron: "0 * * * * ?"
   retencao:
     dias: 15

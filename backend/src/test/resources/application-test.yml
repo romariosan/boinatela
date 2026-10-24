@@ -22,6 +22,10 @@ compregado:
   radar:
     enabled: false
 
+gemini:
+  api:
+    key: ""
+
 app:
   uploads:
     dir: target/test-uploads

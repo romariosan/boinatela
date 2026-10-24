@@ -1,31 +1,19 @@
 package br.com.appcompregado.service;
 
-import br.com.appcompregado.domain.Anuncio;
 import br.com.appcompregado.domain.enums.ChipMensagem;
-import br.com.appcompregado.domain.Usuario;
-import br.com.appcompregado.domain.enums.StatusProcessamento;
-import br.com.appcompregado.repository.AnuncioRepository;
 import java.time.Duration;
-import java.time.LocalDateTime;
-import java.util.ArrayList;
-import java.util.List;
 import java.util.concurrent.ThreadLocalRandom;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.data.domain.PageRequest;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
-import org.springframework.transaction.support.TransactionTemplate;
 
 /**
- * Chip 3. Espera 30 minutos depois da captura e manda o link do lote, com texto variado.
- * O atraso aleatório fica fora da transação para não segurar conexão com o banco.
+ * Chip 3. A estreia do lote de grupo sai pela LeadAbordagemService, em horário comercial,
+ * sem link na primeira frase. Aqui ficam o lembrete do dia seguinte, o clique e a retenção.
  */
 @Service
 public class WhatsAppConsultantService {
 
-    private static final Logger log = LoggerFactory.getLogger(WhatsAppConsultantService.class);
     private static final String FUSO = AssinaturaJobService.FUSO;
 
     private static final String[] SAUDACAO = {"Olá", "Oi", "Bom dia", "Boa tarde"};
@@ -62,22 +50,16 @@ public class WhatsAppConsultantService {
 
     private static final Duration VALIDADE = Duration.ofHours(24);
 
-    private final AnuncioRepository anuncios;
-    private final AuthService authService;
     private final FilaMensagemService fila;
-    private final TransactionTemplate transacao;
+    private final LeadAbordagemService abordagem;
     private final String cron;
 
     public WhatsAppConsultantService(
-            AnuncioRepository anuncios,
-            AuthService authService,
             FilaMensagemService fila,
-            TransactionTemplate transacao,
+            LeadAbordagemService abordagem,
             @Value("${compregado.consultor.cron:0 * * * * ?}") String cron) {
-        this.anuncios = anuncios;
-        this.authService = authService;
         this.fila = fila;
-        this.transacao = transacao;
+        this.abordagem = abordagem;
         this.cron = cron;
     }
 
@@ -86,63 +68,10 @@ public class WhatsAppConsultantService {
         if ("-".equals(cron)) {
             return;
         }
-        LocalDateTime agora = LocalDateTime.now();
-        List<Long> ids = transacao.execute(status -> anuncios.idsParaAbordagem(
-                agora.minusHours(2), agora.minusMinutes(30), PageRequest.of(0, 5)));
-        if (ids == null || ids.isEmpty()) {
-            return;
-        }
-        for (Long id : ids) {
-            try {
-                Thread.sleep(ThreadLocalRandom.current().nextLong(3_000, 6_001));
-            } catch (InterruptedException e) {
-                Thread.currentThread().interrupt();
-                return;
-            }
-            try {
-                transacao.executeWithoutResult(status -> enviarUm(id));
-            } catch (RuntimeException e) {
-                log.warn("Falha ao abordar o anúncio {}: {}", id, e.getMessage());
-            }
-        }
+        abordagem.lembretesSemResposta();
     }
 
-    private void enviarUm(Long id) {
-        Anuncio anuncio = anuncios.findByIdWithVendedor(id).orElse(null);
-        if (anuncio == null
-                || anuncio.isMensagemConsultorEnviada()
-                || anuncio.isReivindicado()
-                || anuncio.getDataCaptura() == null
-                || anuncio.getTelefoneVendedorOriginal() == null) {
-            return;
-        }
-        String telefone = anuncio.getTelefoneVendedorOriginal();
-        boolean manutencao = abordadoNosUltimos30Dias(telefone);
-        String texto = textoDaAbordagem(anuncio, manutencao);
-        despachar(telefone, texto);
-
-        LocalDateTime agora = LocalDateTime.now();
-        anuncio.setMensagemConsultorEnviada(true);
-        anuncio.setDataAbordagemConsultor(agora);
-        authService.localizarPorTelefone(telefone).ifPresent(usuario -> usuario.setDataUltimaAbordagemBot(agora));
-    }
-
-    private boolean abordadoNosUltimos30Dias(String telefone) {
-        LocalDateTime limite = LocalDateTime.now().minusDays(30);
-        Usuario usuario = authService.localizarPorTelefone(telefone).orElse(null);
-        if (usuario != null
-                && usuario.getDataUltimaAbordagemBot() != null
-                && usuario.getDataUltimaAbordagemBot().isAfter(limite)) {
-            return true;
-        }
-        List<String> formas = new ArrayList<>();
-        formas.add(PhoneUtils.normalizar(telefone));
-        formas.addAll(PhoneUtils.variantesLegadas(telefone));
-        LocalDateTime ultima = anuncios.ultimaAbordagem(formas);
-        return ultima != null && ultima.isAfter(limite);
-    }
-
-    /** Chip 3: prospecção, aviso de clique e lembrete de retenção. */
+    /** Chip 3: aviso de clique e lembrete de retenção. A estreia do grupo não passa por aqui. */
     public void enviar(String telefone, String texto) {
         despachar(telefone, texto);
     }
@@ -159,40 +88,8 @@ public class WhatsAppConsultantService {
                 + "O CompreGado não cobra comissão e a venda continua no seu WhatsApp.";
     }
 
-    private static String nome(Usuario vendedor) {
-        if (vendedor == null || ContaCaptura.WHATSAPP.equals(vendedor.getWhatsapp())) {
-            return "produtor";
-        }
-        String nome = vendedor.getNome() == null ? "" : vendedor.getNome().trim();
-        if (nome.isBlank() || "CompreGado".equalsIgnoreCase(nome)) {
-            return "produtor";
-        }
-        return nome.split("\\s+")[0];
-    }
-
-    private static String textoDaAbordagem(Anuncio anuncio, boolean manutencao) {
-        if (anuncio.getStatusProcessamento() == StatusProcessamento.RASCUNHO_SEM_FOTO) {
-            return conviteFoto(nome(anuncio.getVendedor()));
-        }
-        if ("FACEBOOK".equals(anuncio.getOrigem())) {
-            return montarFacebook(
-                    nome(anuncio.getVendedor()),
-                    anuncio.getQuantidade(),
-                    anuncio.getRaca() == null ? null : anuncio.getRaca().name(),
-                    anuncio.getLinkWeb());
-        }
-        if (manutencao) {
-            return montar(true, anuncio.getLinkWeb());
-        }
-        return montarApresentacao(
-                nome(anuncio.getVendedor()),
-                anuncio.getQuantidade(),
-                anuncio.getRaca() == null ? null : anuncio.getRaca().name(),
-                anuncio.getLinkWeb());
-    }
-
     /**
-     * Primeiro contato. Cita o lote, deixa claro que não há comissão e manda o link para reivindicar.
+     * Primeiro contato antigo, ainda coberto por teste. A estreia do grupo usa TextoAbordagem.
      */
     static String montarApresentacao(String nome, Integer quantidade, String raca, String link) {
         String pessoa = nome == null || nome.isBlank() ? "produtor" : nome;
