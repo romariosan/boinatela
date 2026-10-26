@@ -174,11 +174,11 @@ Quando um anúncio é criado (publicação ou captura), `AlertaNotificador` espe
 
 **Clique de contato.** No detalhe, “Falar com o Vendedor” exige login, chama em segundo plano `POST /api/anuncios/{id}/registrar-intere-contato` (autenticado) e abre o `wa.me` devolvido por `POST /api/anuncios/{id}/contato`. O endpoint de clique incrementa `quantidadeCliquesContato`. Se houver celular do vendedor (`telefoneVendedorOriginal` ou WhatsApp do dono, nunca a conta `00000000000`), o **Chip 3** manda, depois do commit:
 
-> Opa! Um comprador de Formosa/Região acabou de clicar para ver seu anúncio no CompreGado. Fique atento ao seu WhatsApp!
+> Aqui é o Antonio, do CompreGado. Um comprador da região acabou de clicar para ver seu anúncio. Fique atento ao seu WhatsApp!
 
 Falha no envio não desfaz a contagem.
 
-**Lembrete de 15 dias.** `AnuncioRetentionScheduler`, todo dia às 9h (Brasília). Entra anúncio com `ativo = true`, status diferente de `VENDIDO`, `mensagemRetencaoEnviada = false` e `dataCaptura` (ou, se ela for nula, `dataCriacao`) com pelo menos `compregado.retencao.dias` dias. Vale lote reivindicado ou não: a pergunta é se já vendeu. Sem telefone válido, marca a flag e para de tentar. Com telefone, o **Chip 3** manda spintax no formato “Fala [primeiro nome ou produtor], tudo bom? … lote de [Raça] … marcar como VENDIDO … [link]”, espera 3–6 s entre um e outro, e só então grava `mensagemRetencaoEnviada = true`. Falha de envio não marca a flag.
+**Lembrete de 15 dias.** `AnuncioRetentionScheduler`, todo dia às 9h (Brasília). Entra anúncio com `ativo = true`, status diferente de `VENDIDO`, `mensagemRetencaoEnviada = false` e `dataCaptura` (ou, se ela for nula, `dataCriacao`) com pelo menos `compregado.retencao.dias` dias. Vale lote reivindicado ou não: a pergunta é se já vendeu. Sem telefone válido, marca a flag e para de tentar. Com telefone, o **Chip 3** manda spintax no formato “Fala [primeiro nome ou produtor], aqui é o Antonio, do CompreGado. … lote de [Raça] … marcar como VENDIDO … [link]”, espera 3–6 s entre um e outro, e só então grava `mensagemRetencaoEnviada = true`. Falha de envio não marca a flag.
 
 **Marcar vendido.** O link não é um PUT nu (o WhatsApp abre GET). `VendidoToken` assina `vendido:{id}` com HMAC-SHA256 do `app.jwt.secret` (Base64 URL, sem padding) e monta `{base}/lote/{id}/vendido?token=`. A página pede confirmação e chama `PUT /api/anuncios/{id}/marcar-vendido`. Aceita o dono logado **ou** o token. Efeito: `status = VENDIDO` e `ativo = false`. Token inválido → 403.
 

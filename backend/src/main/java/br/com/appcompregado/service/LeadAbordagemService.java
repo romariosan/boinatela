@@ -264,7 +264,7 @@ public class LeadAbordagemService {
             return;
         }
         if (!anuncio.isMensagemConsultorEnviada() && !texto.contains("CompreGado")) {
-            texto = "Aqui é da equipe do CompreGado. " + texto;
+            texto = "Sou o " + TextoAbordagem.PERSONAGEM + ", do CompreGado. " + texto;
         }
         if (classificacao.intencao() == IntencaoProdutor.SIM_AINDA && !ctx.linkEnviado() && !ctx.ofereceuLink()) {
             lead.setOfereceuLink(true);

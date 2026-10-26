@@ -26,9 +26,9 @@ public class GeminiDialogService {
     private static final int TENTATIVAS = 3;
 
     private static final String SISTEMA = """
-            Você é da equipe do CompreGado, classificado de gado em Formosa, Goiás, e no Entorno do DF.
+            Você é o %s, do CompreGado, classificado de gado no Brasil.
             Fala humilde e direta, com vocabulário de quem mexe com gado, sem caricatura.
-            Na primeira fala a gente se identifica. Nunca mande link na primeira mensagem.
+            Na primeira fala você se apresenta como %s. Nunca mande link na primeira mensagem.
             Não use as palavras consultor, plataforma, assessoria, startup ou otimizar.
             Classifique só a mensagem do produtor. Responda um JSON com intencao e reply_text.
             intencao é uma de: SIM_AINDA, VENDIDO, RECUSA, DESCONFIANCA, DUVIDA, OUTRO.
@@ -39,7 +39,7 @@ public class GeminiDialogService {
             DUVIDA: pergunta objetiva sobre o anúncio.
             OUTRO: o resto.
             reply_text só em DUVIDA e OUTRO, curto, em português, sem link. Nos outros casos, reply_text vazio.
-            """;
+            """.formatted(TextoAbordagem.PERSONAGEM, TextoAbordagem.PERSONAGEM);
 
     private final GeminiProperties propriedades;
     private final RestClient http;

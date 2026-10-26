@@ -20,7 +20,7 @@ Ele não entra em grupo. Fala só no privado, com o número de quem postou o lot
 
 Ele pergunta à API, de tempos em tempos: “tem mensagem para eu enviar?”. Se tiver, manda uma. Enquanto essa não termina, não pega outra. Quando o produtor responde, o Consultor entrega essa resposta para a API e espera o próximo texto.
 
-A primeira frase sempre diz que é a equipe do CompreGado. A cidade que aparece é a do lote: Formosa, Cabeceiras, Cristalina ou outra que veio no anúncio. O link só sai depois que o produtor aceita ver.
+A primeira frase cita o lote e o grupo, e só depois se apresenta: Antonio, do CompreGado, aqui de Formosa. A cidade do lote é a do anúncio: Formosa, Cabeceiras, Cristalina ou outra que veio no anúncio. O link só sai depois que o produtor aceita ver.
 
 ### Chip Sistema — o porteiro
 
@@ -49,15 +49,15 @@ A frase muda só a cidade. O resto é o mesmo.
 
 Em Cristalina:
 
-> Boa tarde. Aqui é da equipe do CompreGado. Vi seu lote de 30 Nelore em Cristalina, no grupo Pecuária Cristalina. Ainda tá na mão?
+> Boa tarde. Vi seu lote de 30 Nelore em Cristalina, no grupo Pecuária Cristalina. Sou o Antonio, do CompreGado, aqui de Formosa. Ainda tá na mão?
 
 Em Cabeceiras:
 
-> Boa tarde. Aqui é da equipe do CompreGado. Vi seu lote de 30 Nelore em Cabeceiras, no grupo Pecuária Cabeceiras. Ainda tá na mão?
+> Boa tarde. Vi seu lote de 30 Nelore em Cabeceiras, no grupo Pecuária Cabeceiras. Sou o Antonio, do CompreGado, aqui de Formosa. Ainda tá na mão?
 
 Em Formosa:
 
-> Boa tarde. Aqui é da equipe do CompreGado. Vi seu lote de 30 Nelore em Formosa, no grupo Pecuária Formosa. Ainda tá na mão?
+> Boa tarde. Vi seu lote de 30 Nelore em Formosa, no grupo Pecuária Formosa. Sou o Antonio, do CompreGado, aqui de Formosa. Ainda tá na mão?
 
 O “GO” do cadastro não entra na fala. Se a cidade não veio no anúncio, a frase não inventa Formosa: fala só do grupo.
 
@@ -84,7 +84,7 @@ Se ele responder **enquanto a primeira mensagem ainda está na fila**, essa mens
 
 No dia seguinte, em horário comercial, vai **uma** segunda mensagem:
 
-> Aqui é do CompreGado de novo, sobre as 30 Nelore do grupo Pecuária Cristalina. Se não quiser o anúncio no ar, é só falar que eu tiro.
+> Aqui é o Antonio, do CompreGado, de novo, sobre as 30 Nelore do grupo Pecuária Cristalina. Se não quiser o anúncio no ar, é só falar que eu tiro.
 
 O grupo citado é o mesmo da primeira frase. Se o lote era de Cabeceiras, essa segunda mensagem fala do grupo de Cabeceiras.
 

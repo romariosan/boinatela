@@ -16,8 +16,9 @@ import org.springframework.web.server.ResponseStatusException;
 @Service
 public class InteracaoContatoService {
 
-    static final String AVISO = "Opa! Um comprador de Formosa/Região acabou de clicar para ver seu anúncio "
-            + "no CompreGado. Fique atento ao seu WhatsApp!";
+    static final String AVISO = "Aqui é o " + TextoAbordagem.PERSONAGEM + ", do CompreGado. "
+            + "Um comprador da região acabou de clicar para ver seu anúncio. "
+            + "Fique atento ao seu WhatsApp.";
 
     private final AnuncioRepository anuncios;
     private final WhatsAppConsultantService consultor;

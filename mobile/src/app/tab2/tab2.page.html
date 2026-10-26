@@ -5,7 +5,7 @@
   <ion-toolbar class="barra-busca">
     <div class="linha-busca">
       <ion-searchbar
-        placeholder="Ex: Bezerros Nelore, Formosa..."
+        placeholder="Ex: Bezerros Nelore, sua cidade..."
         [debounce]="350"
         inputmode="search"
         enterkeyhint="search"
@@ -19,26 +19,6 @@
     </div>
 
     <ion-grid class="filtros">
-      <ion-row>
-        <ion-col size="12">
-          <ion-select
-            aria-label="Cidade em Goiás"
-            fill="outline"
-            interface="action-sheet"
-            [interfaceOptions]="{ header: 'Cidades de Goiás' }"
-            cancelText="Cancelar"
-            okText="Confirmar"
-            placeholder="Todas as Cidades (GO)"
-            [value]="cidadeGo"
-            (ionChange)="aoMudarCidadeGo($event)"
-          >
-            <ion-select-option value="">Todas as Cidades (GO)</ion-select-option>
-            <ion-select-option *ngFor="let item of cidadesGo" [value]="item">
-              {{ nomeCidade(item) }}
-            </ion-select-option>
-          </ion-select>
-        </ion-col>
-      </ion-row>
       <ion-row>
         <ion-col size="4">
           <ion-select
@@ -71,11 +51,8 @@
             [value]="uf"
             (ionChange)="aoMudarUf($event)"
           >
-            <ion-select-option *ngFor="let item of ufsDaRegiao" [value]="item.sigla">
-              {{ item.nome }} ({{ item.sigla }})
-            </ion-select-option>
             <ion-select-option value="">Todas as UFs</ion-select-option>
-            <ion-select-option *ngFor="let item of outrasUfs" [value]="item.sigla">
+            <ion-select-option *ngFor="let item of ufs" [value]="item.sigla">
               {{ item.nome }} ({{ item.sigla }})
             </ion-select-option>
           </ion-select>
@@ -110,8 +87,8 @@
     <div class="radar-card">
       <p class="radar-titulo">🐮 Não encontrou o gado que procura?</p>
       <p>
-        Ative nosso Radar! Avisamos no seu WhatsApp assim que um produtor postar este perfil de lote em
-        Goiás e nas regiões do DF.
+        Ative nosso Radar! Avisamos no seu WhatsApp assim que um produtor postar este perfil de lote
+        no Brasil.
       </p>
       <ion-button expand="block" class="botao-whatsapp" (click)="abrirRadar()">
         Ativar Alerta Grátis

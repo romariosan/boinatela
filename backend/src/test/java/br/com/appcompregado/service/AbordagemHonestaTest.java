@@ -32,9 +32,11 @@ class AbordagemHonestaTest {
         String texto = TextoAbordagem.estreia(15, 30, "Nelore", "Cristalina - GO", "Pecuária Cristalina");
 
         assertThat(texto).startsWith("Boa tarde.");
-        assertThat(texto).contains("equipe do CompreGado");
+        assertThat(texto).contains("Sou o Antonio, do CompreGado");
+        assertThat(texto.indexOf("30 Nelore")).isLessThan(texto.indexOf("Antonio"));
         assertThat(texto).contains("em Cristalina");
-        assertThat(texto).doesNotContain("em Formosa");
+        assertThat(texto).doesNotContain("Formosa");
+        assertThat(texto).doesNotContain("equipe");
         assertThat(texto).contains("30 Nelore");
         assertThat(texto).contains("no grupo Pecuária Cristalina");
         assertThat(texto).contains("Ainda tá na mão?");

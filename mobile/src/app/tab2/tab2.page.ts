@@ -3,7 +3,7 @@ import { ChangeDetectorRef, Component, NgZone } from '@angular/core';
 import { Router } from '@angular/router';
 import { LoadingController, ToastController } from '@ionic/angular/lazy';
 import { Anuncio, CategoriaAnimal, CategoriaEstoque, RACAS, ROTULOS } from '../models/anuncio';
-import { UFS_REGIAO, UF_PADRAO, separarCidade } from '../models/localidade';
+import { UFS, separarCidade } from '../models/localidade';
 import { AnuncioService } from '../services/anuncio.service';
 import { AtalhoBuscaService } from '../services/atalho-busca.service';
 import { SeletorCidadeService } from '../shared/seletor-cidade/seletor-cidade.service';
@@ -17,7 +17,7 @@ import { SeletorCidadeService } from '../shared/seletor-cidade/seletor-cidade.se
 export class Tab2Page {
   termo = '';
   categoria: CategoriaAnimal | '' = '';
-  uf = UF_PADRAO;
+  uf = '';
   cidade = '';
   categorias: CategoriaEstoque[] = [];
   cidades: string[] = [];
@@ -28,9 +28,7 @@ export class Tab2Page {
   whatsappRadar = '';
   enviandoAlerta = false;
   readonly rotulos = ROTULOS;
-  /** DF e GO; "Todas as UFs" fica logo abaixo delas, antes das demais. */
-  readonly ufsDaRegiao = UFS_REGIAO.slice(0, 2);
-  readonly outrasUfs = UFS_REGIAO.slice(2);
+  readonly ufs = UFS;
 
   private ultimaBusca = 0;
 
@@ -56,7 +54,7 @@ export class Tab2Page {
   }
 
   get temFiltros(): boolean {
-    return !!this.termo.trim() || !!this.categoria || !!this.cidade || this.uf !== UF_PADRAO;
+    return !!this.termo.trim() || !!this.categoria || !!this.cidade || !!this.uf;
   }
 
   /** O termo fica cru: aparar aqui apagaria o espaço que o usuário acabou de digitar no searchbar. */
@@ -68,7 +66,7 @@ export class Tab2Page {
   limparFiltros(): void {
     this.termo = '';
     this.categoria = '';
-    this.uf = UF_PADRAO;
+    this.uf = '';
     this.cidade = '';
     void this.buscar();
   }
@@ -79,23 +77,6 @@ export class Tab2Page {
 
   aoMudarCategoria(event: Event): void {
     this.categoria = (event as CustomEvent).detail.value ?? '';
-    void this.buscar();
-  }
-
-  get cidadesGo(): string[] {
-    return this.cidades.filter(item => separarCidade(item).uf === 'GO');
-  }
-
-  get cidadeGo(): string {
-    return separarCidade(this.cidade).uf === 'GO' ? this.cidade : '';
-  }
-
-  aoMudarCidadeGo(event: Event): void {
-    const valor = String((event as CustomEvent).detail.value ?? '');
-    this.atualizar(() => {
-      this.uf = UF_PADRAO;
-      this.cidade = valor;
-    });
     void this.buscar();
   }
 

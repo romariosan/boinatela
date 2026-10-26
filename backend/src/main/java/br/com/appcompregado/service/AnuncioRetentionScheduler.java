@@ -24,7 +24,6 @@ public class AnuncioRetentionScheduler {
     private static final String FUSO = AssinaturaJobService.FUSO;
 
     private static final String[] SAUDACAO = {"Fala", "Oi", "E aí"};
-    private static final String[] CUMPRIMENTO = {"tudo bom?", "tudo certo?", "como vai?"};
     private static final String[] CORPO = {
         "Vi que seu lote de %s já está anunciado há alguns dias no CompreGado.",
         "Faz uns dias que seu lote de %s está no ar no CompreGado.",
@@ -111,7 +110,8 @@ public class AnuncioRetentionScheduler {
                 ? "gado"
                 : anuncio.getRaca().name().toLowerCase(Locale.ROOT);
         raca = Character.toUpperCase(raca.charAt(0)) + raca.substring(1);
-        return escolher(SAUDACAO) + " " + nome(anuncio.getVendedor()) + ", " + escolher(CUMPRIMENTO) + " "
+        return escolher(SAUDACAO) + " " + nome(anuncio.getVendedor())
+                + ", aqui é o " + TextoAbordagem.PERSONAGEM + ", do CompreGado. "
                 + escolher(CORPO).formatted(raca) + " " + escolher(PERGUNTA) + " "
                 + escolher(FECHO) + " " + vendidoToken.link(anuncio.getId());
     }

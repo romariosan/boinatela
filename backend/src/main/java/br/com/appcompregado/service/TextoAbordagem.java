@@ -7,13 +7,17 @@ import java.util.Locale;
 /** Frases fixas da abordagem. A Gemini não escreve a estreia nem o link. */
 public final class TextoAbordagem {
 
+    /** Quem fala no chip Consultor. O lote vem antes do nome. */
+    public static final String PERSONAGEM = "Antonio";
+
     private TextoAbordagem() {
     }
 
     public static String estreia(int hora, Integer quantidade, String rotulo, String cidade, String grupo) {
         return HorarioComercial.saudacao(hora)
-                + ". Aqui é da equipe do CompreGado. Vi seu lote de "
-                + lote(quantidade, rotulo) + emCidade(cidade) + " " + noGrupo(grupo) + ". Ainda tá na mão?";
+                + ". Vi seu lote de "
+                + lote(quantidade, rotulo) + emCidade(cidade) + " " + noGrupo(grupo)
+                + ". Sou o " + PERSONAGEM + ", do CompreGado. Ainda tá na mão?";
     }
 
     public static String ofertaLink() {
@@ -30,7 +34,7 @@ public final class TextoAbordagem {
     }
 
     public static String desconfianca() {
-        return "CompreGado é classificado de gado aqui de Formosa e do Entorno. "
+        return "Sou o " + PERSONAGEM + ", do CompreGado. É classificado de gado no Brasil. "
                 + "Vi o lote no grupo e coloquei na vitrine. Se não quiser, eu tiro.";
     }
 
@@ -39,7 +43,7 @@ public final class TextoAbordagem {
                 ? "as " + quantidade + " " + rotulo
                 : "o lote de " + rotulo;
         String onde = grupo == null || grupo.isBlank() ? "do grupo" : "do grupo " + grupo.trim();
-        return "Aqui é do CompreGado de novo, sobre " + assunto + " " + onde
+        return "Aqui é o " + PERSONAGEM + ", do CompreGado, de novo, sobre " + assunto + " " + onde
                 + ". Se não quiser o anúncio no ar, é só falar que eu tiro.";
     }
 
@@ -52,7 +56,7 @@ public final class TextoAbordagem {
 
     public static String outroLote(Integer quantidade, String rotulo, String loteAnterior) {
         String anterior = loteAnterior == null || loteAnterior.isBlank() ? "o lote anterior" : loteAnterior;
-        return "Vi outro lote seu no grupo, " + lote(quantidade, rotulo)
+        return "Sou o " + PERSONAGEM + " de novo. Vi outro lote seu no grupo, " + lote(quantidade, rotulo)
                 + ". É o mesmo caso das " + anterior + ": posso colocar na vitrine e te mandar o link?";
     }
 

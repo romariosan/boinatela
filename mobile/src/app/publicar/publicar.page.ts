@@ -21,7 +21,7 @@ import {
   lerMoeda,
   precoComplementar,
 } from '../models/anuncio';
-import { UFS_REGIAO, UF_PADRAO, formatarCidade, separarCidade } from '../models/localidade';
+import { UFS, formatarCidade, separarCidade } from '../models/localidade';
 import { AnuncioService } from '../services/anuncio.service';
 import { pedidoNaoSaiu, registrarFalhaHttp, sessaoInvalida } from '../services/conexao.service';
 import { AuthService } from '../services/auth.service';
@@ -67,7 +67,7 @@ export class PublicarPage implements OnInit, OnDestroy {
   readonly aptidoes = APTIDOES;
   readonly tiposVenda = TIPOS_VENDA;
   readonly rotulos = ROTULOS;
-  readonly ufs = UFS_REGIAO;
+  readonly ufs = UFS;
 
   readonly form = new FormGroup({
     titulo: new FormControl('', {
@@ -88,8 +88,8 @@ export class PublicarPage implements OnInit, OnDestroy {
     }),
     quantidade: new FormControl<number | null>(null, [Validators.min(1), Validators.max(100_000)]),
     pesoMedioKg: new FormControl<number | null>(null, [Validators.min(1), Validators.max(3_000)]),
-    uf: new FormControl(UF_PADRAO, { nonNullable: true, validators: [Validators.required] }),
-    cidade: new FormControl('Formosa', {
+    uf: new FormControl('', { nonNullable: true, validators: [Validators.required] }),
+    cidade: new FormControl('', {
       nonNullable: true,
       validators: [Validators.required, Validators.maxLength(110)],
     }),
@@ -214,6 +214,10 @@ export class PublicarPage implements OnInit, OnDestroy {
 
   async escolherCidade(): Promise<void> {
     const uf = this.form.controls.uf.value;
+    if (!uf) {
+      await this.avisar('Escolha o estado antes da cidade.', 'warning');
+      return;
+    }
     const cidade = await this.seletorCidade.escolher({
       titulo: `Cidade (${uf})`,
       carregar: () => this.localidades.municipios(uf),
@@ -470,7 +474,7 @@ export class PublicarPage implements OnInit, OnDestroy {
         return;
       }
       const local = separarCidade(anuncio.cidade);
-      const uf = local.uf || UF_PADRAO;
+      const uf = local.uf;
       void this.localidades.municipios(uf);
       this.atualizar(() => {
         this.form.setValue(

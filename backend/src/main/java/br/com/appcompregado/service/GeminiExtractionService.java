@@ -25,11 +25,11 @@ public class GeminiExtractionService {
     private static final Logger log = LoggerFactory.getLogger(GeminiExtractionService.class);
 
     private static final String PEDIDO = """
-            Você é especialista na geografia de Goiás e do Entorno do Distrito Federal.
+            Você é especialista na geografia do Brasil.
             Extraia um anúncio de gado desta mensagem de WhatsApp.
             O grupo de origem tem cidade padrão %s e UF %s.
-            Se a mensagem citar uma cidade, use essa cidade. Se não citar, use a cidade padrão do grupo.
-            A UF é a sigla de duas letras (GO, ou DF só se a cidade citada for do Distrito Federal).
+            Se a mensagem citar uma cidade, use essa cidade, em qualquer estado. Se não citar, use a cidade padrão do grupo.
+            A UF é a sigla de duas letras do estado dessa cidade.
             Responda só um JSON com as chaves titulo (string curta), preco (número em reais, ou null),
             raca (uma de NELORE, ANGUS, GIROLANDO, BRAHMAN, SENEPOL, BRANGUS, GUZERA, TABAPUA, GIR,
             HOLANDES, CARACU, CANCHIM, MISTO, OUTRA), quantidade (inteiro de cabeças, ou null),
