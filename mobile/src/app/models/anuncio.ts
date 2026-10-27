@@ -199,6 +199,8 @@ export interface AuthPayload {
   /** Ausente em sessões salvas antes da verificação existir: tratar como não verificado. */
   telefoneVerificado?: boolean;
   codigoVerificacao?: string | null;
+  /** Painel /admin. Ausente em sessões antigas = não admin. */
+  admin?: boolean;
 }
 
 export interface VerificacaoStatus {

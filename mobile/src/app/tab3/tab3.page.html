@@ -189,6 +189,19 @@
       </div>
     </section>
 
+    <section class="secao" *ngIf="usuario.admin" aria-labelledby="titulo-admin">
+      <h2 class="titulo-secao" id="titulo-admin">Administração</h2>
+      <ion-list inset="true" class="preferencias">
+        <ion-item button detail="true" lines="none" (click)="abrirAdmin()">
+          <ion-icon slot="start" name="shield-checkmark-outline" aria-hidden="true"></ion-icon>
+          <ion-label>
+            <span class="rotulo-opcao">Moderação e prospecção</span>
+            <span class="dica-opcao">Aprovar lotes do Radar e abordar vendedores.</span>
+          </ion-label>
+        </ion-item>
+      </ion-list>
+    </section>
+
     <section class="secao" aria-labelledby="titulo-seguranca">
       <h2 class="titulo-secao" id="titulo-seguranca">Segurança</h2>
       <ion-list inset="true" class="preferencias">

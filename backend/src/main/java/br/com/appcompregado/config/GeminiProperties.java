@@ -9,7 +9,7 @@ public class GeminiProperties {
 
     private String key = "";
 
-    private String url = "https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent";
+    private String url = "https://generativelanguage.googleapis.com/v1beta/models/gemini-3.8-flash:generateContent";
 
     public String getKey() {
         return key;

@@ -7,24 +7,31 @@ import br.com.appcompregado.domain.enums.AnuncioStatus;
 import br.com.appcompregado.domain.enums.Aptidao;
 import br.com.appcompregado.domain.enums.CategoriaAnimal;
 import br.com.appcompregado.domain.enums.Raca;
+import br.com.appcompregado.domain.enums.StatusContato;
 import br.com.appcompregado.domain.enums.StatusProcessamento;
+import br.com.appcompregado.domain.enums.StatusPublicacao;
 import br.com.appcompregado.domain.enums.TipoVenda;
 import br.com.appcompregado.repository.AnuncioRepository;
 import br.com.appcompregado.repository.UsuarioRepository;
+import br.com.appcompregado.config.GeminiProperties;
 import br.com.appcompregado.service.GeminiExtractionService.ExtracaoAnuncio;
 import com.fasterxml.jackson.databind.JsonNode;
 import java.math.BigDecimal;
 import java.time.Duration;
 import java.time.Instant;
 import java.time.LocalDateTime;
+import java.time.ZoneId;
 import java.util.ArrayList;
 import java.util.Base64;
 import java.util.List;
 import java.util.Locale;
 import java.util.Optional;
 import java.util.UUID;
+import java.util.concurrent.Executor;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Qualifier;
+import org.springframework.context.annotation.Lazy;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
@@ -40,33 +47,39 @@ public class ScraperAnuncioService {
 
     private final AnuncioRepository anuncios;
     private final UsuarioRepository usuarios;
-    private final GeminiExtractionService gemini;
+    private final GeminiProperties geminiProps;
     private final PasswordEncoder passwordEncoder;
     private final AlertaNotificador radar;
     private final GrupoWhatsappService grupos;
     private final ArmazenamentoLocalService armazenamento;
     private final LeadAbordagemService abordagem;
     private final TransactionTemplate transacao;
+    private final Executor executor;
+    private final GeminiEnrichmentJobService enriquecimento;
 
     public ScraperAnuncioService(
             AnuncioRepository anuncios,
             UsuarioRepository usuarios,
-            GeminiExtractionService gemini,
+            GeminiProperties geminiProps,
             PasswordEncoder passwordEncoder,
             AlertaNotificador radar,
             GrupoWhatsappService grupos,
             ArmazenamentoLocalService armazenamento,
             LeadAbordagemService abordagem,
-            TransactionTemplate transacao) {
+            TransactionTemplate transacao,
+            @Qualifier("applicationTaskExecutor") Executor executor,
+            @Lazy GeminiEnrichmentJobService enriquecimento) {
         this.anuncios = anuncios;
         this.usuarios = usuarios;
-        this.gemini = gemini;
+        this.geminiProps = geminiProps;
         this.passwordEncoder = passwordEncoder;
         this.radar = radar;
         this.grupos = grupos;
         this.armazenamento = armazenamento;
         this.abordagem = abordagem;
         this.transacao = transacao;
+        this.executor = executor;
+        this.enriquecimento = enriquecimento;
     }
 
     public ResultadoCaptura ingerir(JsonNode corpo) {
@@ -74,12 +87,33 @@ public class ScraperAnuncioService {
         if (preparo.recusa() != null) {
             return preparo.recusa();
         }
+        // Webhook responde rápido: ExtracaoLocal na hora; Gemini só em segundo plano.
         ExtracaoAnuncio extraido = preparo.texto().isBlank()
                 ? null
-                : gemini.extrair(preparo.texto(), preparo.cidadePadrao(), preparo.ufPadrao()).orElse(null);
+                : ExtracaoLocal.extrair(preparo.texto(), preparo.cidadePadrao(), preparo.ufPadrao())
+                        .orElse(null);
         ExtracaoAnuncio lido = extraido;
-        ResultadoCaptura gravado = transacao.execute(status -> gravar(preparo, lido));
-        return gravado == null ? ResultadoCaptura.recusado("falha ao gravar") : gravado;
+        boolean enfileirarGemini = chaveGemini() && !preparo.texto().isBlank();
+        ResultadoCaptura gravado = transacao.execute(status -> gravar(preparo, lido, enfileirarGemini));
+        if (gravado == null) {
+            return ResultadoCaptura.recusado("falha ao gravar");
+        }
+        if (enfileirarGemini && gravado.aceito() && gravado.anuncioId() != null) {
+            Long id = gravado.anuncioId();
+            executor.execute(() -> {
+                try {
+                    enriquecimento.tentarUm(id);
+                } catch (RuntimeException e) {
+                    log.warn("Primeira tentativa Gemini em segundo plano falhou para anúncio {}: {}",
+                            id, e.toString());
+                }
+            });
+        }
+        return gravado;
+    }
+
+    private boolean chaveGemini() {
+        return geminiProps.getKey() != null && !geminiProps.getKey().isBlank();
     }
 
     private Preparo preparar(JsonNode corpo) {
@@ -110,7 +144,10 @@ public class ScraperAnuncioService {
         }
 
         String jid = jidDoGrupo(data, corpo);
-        GrupoWhatsapp grupo = grupos.resolver(jid, nomeDoGrupo(data, corpo));
+        String nomeGrupoVivo = nomeDoGrupo(data, corpo);
+        GrupoWhatsapp grupo = grupos.resolver(jid, nomeGrupoVivo);
+        // Nome vivo da mensagem (não o antigo no banco) para inferir Luziânia etc.
+        String nomeParaCidade = nomeGrupoVivo.isBlank() ? grupo.getNomeGrupo() : nomeGrupoVivo;
         return new Preparo(
                 null,
                 data,
@@ -119,23 +156,49 @@ public class ScraperAnuncioService {
                 telefoneRemetente,
                 grupo.getCidadePadrao(),
                 grupo.getUfPadrao(),
-                grupo.getNomeGrupo());
+                nomeParaCidade);
     }
 
-    private ResultadoCaptura gravar(Preparo preparo, ExtracaoAnuncio extraido) {
+    private ResultadoCaptura gravar(Preparo preparo, ExtracaoAnuncio extraido, boolean enfileirarGemini) {
         JsonNode data = preparo.data();
         JsonNode corpo = preparo.corpo();
         String textoCompleto = preparo.texto();
         String telefoneCurado = telefoneDaCuradoria(extraido, textoCompleto);
         String telefone = telefoneCurado == null ? preparo.telefoneRemetente() : telefoneCurado;
         String origem = telefoneCurado == null ? "WHATSAPP" : "FACEBOOK";
+        LocalDateTime agora = LocalDateTime.now(ZoneId.of(GeminiEnrichmentJobService.FUSO));
 
         Optional<Anuncio> repetido = anuncios
                 .findFirstByTelefoneVendedorOriginalAndDataCapturaAfterOrderByDataCapturaDesc(
                         telefone, LocalDateTime.now().minusDays(14));
         if (repetido.isPresent()) {
             Anuncio existente = repetido.get();
-            existente.setDataCaptura(LocalDateTime.now());
+            existente.setDataCaptura(agora);
+            // Nova captura do Radar: volta ao limbo. Sem isto, um lote já APROVADO
+            // no update de 14 dias reaparecia na vitrine sem nova moderação.
+            existente.setStatusPublicacao(StatusPublicacao.PENDENTE);
+            if (existente.getStatusContato() != StatusContato.REIVINDICADO) {
+                existente.setStatusContato(StatusContato.NAO_CONTATADO);
+            }
+            aplicarExtracao(
+                    existente,
+                    extraido,
+                    preparo.cidadePadrao(),
+                    preparo.ufPadrao(),
+                    textoCompleto,
+                    "FACEBOOK".equals(origem),
+                    preparo.nomeGrupo());
+            boolean publicadoAgora = anexarFotos(existente, coletarFotos(data, corpo));
+            if (enfileirarGemini) {
+                marcarGeminiPendente(existente, agora);
+            }
+            anuncios.save(existente);
+            if (publicadoAgora) {
+                radar.agendar(existente);
+                if (tituloProntoParaAbordagem(existente) && PhoneUtils.celularBrasileiro(telefone)) {
+                    abordagem.agendarEstreia(existente, preparo.nomeGrupo());
+                }
+            }
             return new ResultadoCaptura(true, "anúncio atualizado", existente.getId());
         }
 
@@ -146,14 +209,21 @@ public class ScraperAnuncioService {
             anuncio.setPreco(BigDecimal.ZERO);
             anuncio.setRaca(Raca.OUTRA);
             anuncio.setQuantidade(null);
-            anuncio.setCidade(preparo.cidadePadrao() + " - " + preparo.ufPadrao());
-            log.info("Captura sem Gemini: anúncio gravado com o texto original.");
+            anuncio.setCidade(cidadeDoTextoOuPadrao(
+                    textoCompleto, null, null, preparo.cidadePadrao(), preparo.ufPadrao(), preparo.nomeGrupo()));
+            log.info("Captura local: anúncio gravado; Gemini tenta depois se a chave existir.");
         } else {
             anuncio.setTitulo(limitar(extraido.titulo(), 180));
             anuncio.setPreco(precoOuZero(extraido.preco()));
             anuncio.setRaca(extraido.raca() == null ? Raca.OUTRA : extraido.raca());
             anuncio.setQuantidade(extraido.quantidade());
-            anuncio.setCidade(montarCidade(extraido.cidade(), extraido.uf(), preparo.cidadePadrao(), preparo.ufPadrao()));
+            anuncio.setCidade(cidadeDoTextoOuPadrao(
+                    textoCompleto,
+                    extraido.cidade(),
+                    extraido.uf(),
+                    preparo.cidadePadrao(),
+                    preparo.ufPadrao(),
+                    preparo.nomeGrupo()));
         }
         anuncio.setDescricao(descricao);
         anuncio.setCategoriaAnimal(categoriaDe(descricao));
@@ -162,26 +232,32 @@ public class ScraperAnuncioService {
                 ? TipoVenda.LOTE
                 : TipoVenda.CABECA);
         anuncio.setStatus(AnuncioStatus.ATIVO);
+        // Captura do grupo: entra pendente de moderação; só APROVADO vai à vitrine.
+        anuncio.setStatusPublicacao(StatusPublicacao.PENDENTE);
+        anuncio.setStatusContato(StatusContato.NAO_CONTATADO);
         anuncio.setTelefoneVendedorOriginal(telefone);
         anuncio.setOrigem(origem);
         anuncio.setReivindicado(false);
-        anuncio.setDataCaptura(LocalDateTime.now());
+        anuncio.setDataCaptura(agora);
         anuncio.setVendedor(contaCaptura());
-        List<String> fotos = fotosDasMidias(corpo);
-        if (fotos.isEmpty()) {
-            String foto = guardarFoto(data, corpo);
-            if (foto != null) {
-                fotos = List.of(foto);
-            }
-        }
+        List<String> fotos = coletarFotos(data, corpo);
         if (fotos.isEmpty()) {
             anuncio.setAtivo(false);
             anuncio.setStatusProcessamento(StatusProcessamento.RASCUNHO_SEM_FOTO);
         } else {
-            anuncio.setAtivo(true);
-            anuncio.setStatusProcessamento(StatusProcessamento.PUBLICADO);
             anuncio.setUrlFotoPrincipal(fotos.get(0));
             anuncio.getFotos().addAll(fotos);
+            if (prontoParaVitrine(anuncio)) {
+                anuncio.setAtivo(true);
+                anuncio.setStatusProcessamento(StatusProcessamento.PUBLICADO);
+            } else {
+                anuncio.setAtivo(false);
+                anuncio.setStatusProcessamento(StatusProcessamento.RASCUNHO_SEM_FOTO);
+                log.info("Captura com foto sem título/preço: fica rascunho até a extração preencher.");
+            }
+        }
+        if (enfileirarGemini) {
+            marcarGeminiPendente(anuncio, agora);
         }
         anuncio = anuncios.save(anuncio);
         if (anuncio.getStatusProcessamento() == StatusProcessamento.PUBLICADO) {
@@ -191,6 +267,15 @@ public class ScraperAnuncioService {
             abordagem.agendarEstreia(anuncio, preparo.nomeGrupo());
         }
         return new ResultadoCaptura(true, null, anuncio.getId());
+    }
+
+    static void marcarGeminiPendente(Anuncio anuncio, LocalDateTime agora) {
+        if (anuncio == null) {
+            return;
+        }
+        anuncio.setGeminiPendente(true);
+        anuncio.setTentativasGemini(0);
+        anuncio.setProximaTentativaGemini(agora);
     }
 
     private record Preparo(
@@ -254,11 +339,57 @@ public class ScraperAnuncioService {
         return limitar(corpo, 4000);
     }
 
+    /**
+     * Prioridade (anti-alucinação, ordem fixa):
+     * (1) local explícito na MENSAGEM (município, depois estado/DF);
+     * (2) só se a mensagem não tiver local → município no NOME DO GRUPO;
+     * (3) senão {@link CidadesGoias#SEM_CIDADE} ("Local a combinar"). Nunca inventa Formosa.
+     */
+    static String cidadeDoTextoOuPadrao(
+            String texto,
+            String cidadeExtraida,
+            String ufExtraida,
+            String cidadePadrao,
+            String ufPadrao,
+            String nomeGrupo) {
+        Optional<CidadesGoias.Local> municipioTexto = CidadesGoias.inferirMunicipio(texto);
+        if (municipioTexto.isPresent()) {
+            return montarCidade(municipioTexto.get().cidade(), municipioTexto.get().uf(), null, null);
+        }
+        Optional<CidadesGoias.Local> estadoTexto = CidadesGoias.inferirEstado(texto);
+        if (estadoTexto.isPresent()) {
+            return montarCidade(estadoTexto.get().cidade(), estadoTexto.get().uf(), null, null);
+        }
+        if (cidadeExtraida != null
+                && !CidadesGoias.ehSemCidade(cidadeExtraida)
+                && !CidadesGoias.ehNomeEstado(cidadeExtraida)
+                && CidadesGoias.inferirMunicipio(cidadeExtraida).isPresent()) {
+            return montarCidade(cidadeExtraida, ufExtraida, null, null);
+        }
+        if (cidadeExtraida != null
+                && !CidadesGoias.ehSemCidade(cidadeExtraida)
+                && CidadesGoias.ehNomeEstado(cidadeExtraida)) {
+            return montarCidade(cidadeExtraida, ufExtraida, null, null);
+        }
+        Optional<CidadesGoias.Local> municipioGrupo = CidadesGoias.inferirMunicipio(nomeGrupo);
+        if (municipioGrupo.isPresent()) {
+            return montarCidade(municipioGrupo.get().cidade(), municipioGrupo.get().uf(), null, null);
+        }
+        return CidadesGoias.SEM_CIDADE;
+    }
+
     private static String montarCidade(String cidade, String uf, String cidadePadrao, String ufPadrao) {
         String nome = cidade == null || cidade.isBlank() ? cidadePadrao : cidade.trim();
-        String sigla = uf == null || !uf.matches("(?i)[a-z]{2}") ? ufPadrao : uf.trim().toUpperCase(Locale.ROOT);
+        if (CidadesGoias.ehSemCidade(nome)) {
+            return CidadesGoias.SEM_CIDADE;
+        }
+        String sigla = uf == null || !uf.matches("(?i)[a-z]{2}")
+                ? (ufPadrao != null && ufPadrao.matches("(?i)[a-z]{2}") ? ufPadrao.trim().toUpperCase(Locale.ROOT) : "GO")
+                : uf.trim().toUpperCase(Locale.ROOT);
         if (nome.matches("(?i).* - [a-z]{2}$")) {
-            return nome.substring(0, nome.length() - 5).trim() + " - " + nome.substring(nome.length() - 2).toUpperCase(Locale.ROOT);
+            return nome.substring(0, nome.length() - 5).trim()
+                    + " - "
+                    + nome.substring(nome.length() - 2).toUpperCase(Locale.ROOT);
         }
         return nome + " - " + sigla;
     }
@@ -314,8 +445,133 @@ public class ScraperAnuncioService {
         return data.path("groupSubject").asText("").trim();
     }
 
-    private static boolean temMidia(JsonNode data, JsonNode corpo) {
-        return !urlDaFoto(data, corpo).isBlank() || !base64DaFoto(data, corpo).isBlank();
+    static boolean temMidia(JsonNode data, JsonNode corpo) {
+        if (!urlDaFoto(data, corpo).isBlank() || !base64DaFoto(data, corpo).isBlank()) {
+            return true;
+        }
+        JsonNode midias = corpo.path("midias");
+        if (!midias.isArray()) {
+            return false;
+        }
+        for (JsonNode midia : midias) {
+            if (!midia.path("base64").asText("").isBlank()) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    /**
+     * Copia a extração nova para um anúncio que já existe. Extração vazia não apaga título,
+     * preço nem cidade que já estavam bons. Preço zero e cidade em branco também não substituem.
+     */
+    static void aplicarExtracao(
+            Anuncio anuncio,
+            ExtracaoAnuncio extraido,
+            String cidadePadrao,
+            String ufPadrao,
+            String texto,
+            boolean facebook) {
+        aplicarExtracao(anuncio, extraido, cidadePadrao, ufPadrao, texto, facebook, null);
+    }
+
+    static void aplicarExtracao(
+            Anuncio anuncio,
+            ExtracaoAnuncio extraido,
+            String cidadePadrao,
+            String ufPadrao,
+            String texto,
+            boolean facebook,
+            String nomeGrupo) {
+        if (anuncio == null || extraido == null) {
+            return;
+        }
+        if (extraido.titulo() != null && !extraido.titulo().isBlank()) {
+            anuncio.setTitulo(limitar(extraido.titulo(), 180));
+        }
+        if (extraido.preco() != null && extraido.preco().signum() > 0) {
+            anuncio.setPreco(extraido.preco());
+        }
+        if (extraido.raca() != null) {
+            anuncio.setRaca(extraido.raca());
+        }
+        if (extraido.quantidade() != null) {
+            anuncio.setQuantidade(extraido.quantidade());
+        }
+        anuncio.setCidade(cidadeDoTextoOuPadrao(
+                texto, extraido.cidade(), extraido.uf(), cidadePadrao, ufPadrao, nomeGrupo));
+        if (texto == null || texto.isBlank()) {
+            return;
+        }
+        String descricao = descricaoPublica(texto, facebook);
+        anuncio.setDescricao(descricao);
+        anuncio.setCategoriaAnimal(categoriaDe(descricao));
+        anuncio.setAptidao(aptidaoDe(descricao));
+        anuncio.setTipoVenda(anuncio.getQuantidade() != null && anuncio.getQuantidade() > 1
+                ? TipoVenda.LOTE
+                : TipoVenda.CABECA);
+    }
+
+    static boolean tituloProntoParaAbordagem(Anuncio anuncio) {
+        if (anuncio == null || anuncio.getTitulo() == null) {
+            return false;
+        }
+        String titulo = anuncio.getTitulo().trim();
+        return !titulo.isEmpty() && !"Anúncio de gado".equals(titulo);
+    }
+
+    /** Vitrine só com título real ou preço preenchido. Foto sozinha não publica "Anúncio de gado". */
+    static boolean prontoParaVitrine(Anuncio anuncio) {
+        if (anuncio == null) {
+            return false;
+        }
+        boolean precoOk = anuncio.getPreco() != null && anuncio.getPreco().signum() > 0;
+        return tituloProntoParaAbordagem(anuncio) || precoOk;
+    }
+
+    /**
+     * Anexa fotos a um anúncio já gravado. Rascunho vira publicado só com título ou preço reais.
+     * Devolve true só nessa virada, para não repetir o alerta de um lote que já estava no ar.
+     */
+    static boolean anexarFotos(Anuncio anuncio, List<String> fotosNovas) {
+        if (anuncio == null || fotosNovas == null || fotosNovas.isEmpty()) {
+            return false;
+        }
+        boolean eraRascunho = anuncio.getStatusProcessamento() == StatusProcessamento.RASCUNHO_SEM_FOTO;
+        for (String foto : fotosNovas) {
+            if (foto == null || foto.isBlank() || anuncio.getFotos().contains(foto)) {
+                continue;
+            }
+            if (anuncio.getFotos().size() >= 5) {
+                break;
+            }
+            anuncio.getFotos().add(foto);
+        }
+        if (anuncio.getFotos().isEmpty()) {
+            return false;
+        }
+        if (anuncio.getUrlFotoPrincipal() == null || anuncio.getUrlFotoPrincipal().isBlank()) {
+            anuncio.setUrlFotoPrincipal(anuncio.getFotos().get(0));
+        }
+        if (!eraRascunho || anuncio.getStatus() == AnuncioStatus.VENDIDO) {
+            return false;
+        }
+        if (!prontoParaVitrine(anuncio)) {
+            return false;
+        }
+        anuncio.setAtivo(true);
+        anuncio.setStatus(AnuncioStatus.ATIVO);
+        anuncio.setStatusProcessamento(StatusProcessamento.PUBLICADO);
+        return true;
+    }
+
+    private List<String> coletarFotos(JsonNode data, JsonNode corpo) {
+        List<String> fotos = fotosDasMidias(corpo);
+        if (!fotos.isEmpty()) {
+            return fotos;
+        }
+        String foto = guardarFoto(data, corpo);
+        return foto == null ? List.of() : List.of(foto);
     }
 
     private List<String> fotosDasMidias(JsonNode corpo) {

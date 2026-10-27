@@ -1,0 +1,159 @@
+<ion-header>
+  <ion-toolbar color="primary">
+    <ion-buttons slot="start">
+      <ion-back-button defaultHref="/tabs/tab3"></ion-back-button>
+    </ion-buttons>
+    <ion-title>Admin CompreGado</ion-title>
+  </ion-toolbar>
+  <ion-toolbar>
+    <ion-segment [value]="aba" (ionChange)="trocarAba($event)">
+      <ion-segment-button value="moderacao">
+        <ion-label>Moderação</ion-label>
+      </ion-segment-button>
+      <ion-segment-button value="prospeccao">
+        <ion-label>Prospecção</ion-label>
+      </ion-segment-button>
+    </ion-segment>
+  </ion-toolbar>
+</ion-header>
+
+<ion-content class="admin-conteudo">
+  <ion-refresher slot="fixed" (ionRefresh)="atualizarPuxando($event)">
+    <ion-refresher-content></ion-refresher-content>
+  </ion-refresher>
+
+  <div class="estado" *ngIf="carregando">Carregando…</div>
+
+  <ng-container *ngIf="!carregando && aba === 'moderacao'">
+    <p class="dica" *ngIf="!listaModeracao.length && !usandoAmostra">
+      Nenhum anúncio pendente de moderação.
+    </p>
+    <p class="dica amostra" *ngIf="usandoAmostra">
+      Fila vazia — amostra visual (Planaltina / Cabeceiras / Local a combinar).
+    </p>
+    <div class="masonry">
+      <article class="pin" *ngFor="let item of listaModeracao">
+        <div class="pin-foto">
+          <img
+            *ngIf="item.urlFotoPrincipal"
+            [src]="item.urlFotoPrincipal"
+            [alt]="item.titulo"
+          />
+          <div class="pin-placeholder" *ngIf="!item.urlFotoPrincipal">Sem foto</div>
+          <span class="selo" [attr.data-etapa]="etapaFunil(item)">{{ rotuloFunil(item) }}</span>
+        </div>
+        <div class="pin-corpo">
+          <h2>{{ item.titulo }}</h2>
+          <p class="preco">{{ item.precoFormatado }}</p>
+          <p class="meta">{{ item.cidade || 'Local a combinar' }}</p>
+          <p class="meta" *ngIf="item.telefoneVendedor">WhatsApp: {{ item.telefoneVendedor }}</p>
+          <p class="aviso" *ngIf="avisoVitrine(item) as aviso">{{ aviso }}</p>
+          <div class="funil" aria-hidden="true">
+            <span *ngFor="let e of etapasFunil" [class.ativo]="etapaAtiva(item, e)">{{ e.curto }}</span>
+          </div>
+          <div class="acoes" *ngIf="!usandoAmostra">
+            <ion-button fill="outline" size="small" (click)="abrirEdicao(item)">Editar</ion-button>
+            <ion-button
+              color="success"
+              size="small"
+              [disabled]="!aptoVitrine(item)"
+              (click)="aprovar(item)"
+            >Aprovar</ion-button>
+            <ion-button color="danger" fill="outline" size="small" (click)="rejeitar(item)">Rejeitar</ion-button>
+          </div>
+        </div>
+      </article>
+    </div>
+  </ng-container>
+
+  <ng-container *ngIf="!carregando && aba === 'prospeccao'">
+    <p class="dica" *ngIf="!listaProspeccao.length && !usandoAmostra">
+      Nenhum aprovado aguardando contato.
+    </p>
+    <p class="dica amostra" *ngIf="usandoAmostra">
+      Fila vazia — amostra visual da prospecção.
+    </p>
+    <div class="masonry">
+      <article class="pin" *ngFor="let item of listaProspeccao">
+        <div class="pin-foto">
+          <img
+            *ngIf="item.urlFotoPrincipal"
+            [src]="item.urlFotoPrincipal"
+            [alt]="item.titulo"
+          />
+          <div class="pin-placeholder" *ngIf="!item.urlFotoPrincipal">Sem foto</div>
+          <span class="selo" [attr.data-etapa]="etapaFunil(item)">{{ rotuloFunil(item) }}</span>
+        </div>
+        <div class="pin-corpo">
+          <h2>{{ item.titulo }}</h2>
+          <p class="preco">{{ item.precoFormatado }}</p>
+          <p class="meta">{{ item.cidade || 'Local a combinar' }}</p>
+          <p class="meta">{{ item.vendedorNome || 'Vendedor' }} · {{ item.telefoneVendedor || 'sem telefone' }}</p>
+          <div class="funil" aria-hidden="true">
+            <span *ngFor="let e of etapasFunil" [class.ativo]="etapaAtiva(item, e)">{{ e.curto }}</span>
+          </div>
+          <div class="acoes" *ngIf="!usandoAmostra">
+            <ion-button fill="outline" size="small" (click)="abrirEdicao(item)">Editar</ion-button>
+            <ion-button class="botao-whatsapp" size="small" (click)="chamarWhatsapp(item)">
+              Chamar no WhatsApp
+            </ion-button>
+            <ion-button fill="outline" size="small" (click)="marcarContatado(item)">Contatado</ion-button>
+          </div>
+        </div>
+      </article>
+    </div>
+  </ng-container>
+
+  <div class="editar-fundo" *ngIf="editando && form" (click)="fecharEdicao()"></div>
+  <aside class="editar-painel" *ngIf="editando && form" role="dialog" aria-label="Editar anúncio">
+    <header class="editar-cabecalho">
+      <h2>Editar anúncio #{{ form.id }}</h2>
+      <ion-button fill="clear" size="small" (click)="fecharEdicao()">Fechar</ion-button>
+    </header>
+    <div class="editar-campos">
+      <label>
+        Título
+        <ion-input [(ngModel)]="form.titulo" name="titulo"></ion-input>
+      </label>
+      <label>
+        Descrição
+        <ion-textarea [(ngModel)]="form.descricao" name="descricao" auto-grow="true" rows="3"></ion-textarea>
+      </label>
+      <label>
+        Preço (R$)
+        <ion-input type="number" [(ngModel)]="form.preco" name="preco"></ion-input>
+      </label>
+      <label>
+        Cidade
+        <ion-input [(ngModel)]="form.cidade" name="cidade" placeholder="Local a combinar"></ion-input>
+      </label>
+      <label>
+        Quantidade
+        <ion-input type="number" [(ngModel)]="form.quantidade" name="quantidade"></ion-input>
+      </label>
+      <label>
+        Categoria
+        <ion-select [(ngModel)]="form.categoriaAnimal" name="categoria" interface="popover" placeholder="—">
+          <ion-select-option *ngFor="let c of categorias" [value]="c">{{ c }}</ion-select-option>
+        </ion-select>
+      </label>
+      <label>
+        Aptidão
+        <ion-select [(ngModel)]="form.aptidao" name="aptidao" interface="popover" placeholder="—">
+          <ion-select-option *ngFor="let a of aptidoes" [value]="a">{{ a }}</ion-select-option>
+        </ion-select>
+      </label>
+      <label>
+        Raça
+        <ion-select [(ngModel)]="form.raca" name="raca" interface="popover" placeholder="—">
+          <ion-select-option *ngFor="let r of racas" [value]="r">{{ r }}</ion-select-option>
+        </ion-select>
+      </label>
+    </div>
+    <footer class="editar-acoes">
+      <ion-button expand="block" [disabled]="salvandoEdicao" (click)="salvarEdicao()">
+        {{ salvandoEdicao ? 'Salvando…' : 'Salvar' }}
+      </ion-button>
+    </footer>
+  </aside>
+</ion-content>

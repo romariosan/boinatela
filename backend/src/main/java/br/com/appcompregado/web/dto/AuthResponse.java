@@ -6,5 +6,6 @@ public record AuthResponse(
         String nome,
         String whatsapp,
         boolean telefoneVerificado,
-        String codigoVerificacao) {
+        String codigoVerificacao,
+        boolean admin) {
 }

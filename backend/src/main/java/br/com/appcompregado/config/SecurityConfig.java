@@ -50,6 +50,7 @@ public class SecurityConfig {
                                 "/api/webhook/whatsapp-scraper",
                                 "/api/webhook/radar-ofertas").permitAll()
                         .requestMatchers(HttpMethod.GET, "/api/anuncios/meus").authenticated()
+                        .requestMatchers("/api/admin/**").authenticated()
                         .requestMatchers(HttpMethod.GET, "/api/anuncios", "/api/anuncios/*").permitAll()
                         .requestMatchers(HttpMethod.GET, "/api/categorias", "/api/cidades").permitAll()
                         .requestMatchers(HttpMethod.GET, "/uploads/**").permitAll()

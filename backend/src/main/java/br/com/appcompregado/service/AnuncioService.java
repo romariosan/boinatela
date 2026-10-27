@@ -7,7 +7,9 @@ import br.com.appcompregado.domain.enums.AnuncioStatus;
 import br.com.appcompregado.domain.enums.Aptidao;
 import br.com.appcompregado.domain.enums.CategoriaAnimal;
 import br.com.appcompregado.domain.enums.Raca;
+import br.com.appcompregado.domain.enums.StatusContato;
 import br.com.appcompregado.domain.enums.StatusProcessamento;
+import br.com.appcompregado.domain.enums.StatusPublicacao;
 import br.com.appcompregado.repository.AnuncioBusca;
 import br.com.appcompregado.repository.AnuncioRepository;
 import br.com.appcompregado.repository.LeadContatoRepository;
@@ -83,7 +85,12 @@ public class AnuncioService {
 
     @Transactional(readOnly = true)
     public AnuncioResponse buscarPorId(Long id) {
-        return AnuncioResponse.from(carregar(id));
+        Anuncio anuncio = carregar(id);
+        // Detalhe público: mesmo critério da vitrine — limbo PENDENTE não abre por URL.
+        if (anuncio.getStatusPublicacao() != StatusPublicacao.APROVADO) {
+            throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Anúncio não encontrado");
+        }
+        return AnuncioResponse.from(anuncio);
     }
 
     @Transactional(readOnly = true)
@@ -120,6 +127,10 @@ public class AnuncioService {
         anuncio.getFotos().addAll(salvas);
         anuncio.setUrlFotoPrincipal(salvas.get(0));
         anuncio.setStatusProcessamento(StatusProcessamento.PUBLICADO);
+        // Publicação pelo app (usuário verificado): já é de confiança — vai direto à vitrine.
+        // Captura do Radar continua PENDENTE (ver ScraperAnuncioService).
+        anuncio.setStatusPublicacao(StatusPublicacao.APROVADO);
+        anuncio.setStatusContato(StatusContato.REIVINDICADO);
         anuncio.setReivindicado(true);
         anuncio.setVendedor(vendedor);
         anuncio = anuncioRepository.saveAndFlush(anuncio);

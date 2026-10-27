@@ -39,6 +39,11 @@ public class Usuario {
     @ColumnDefault("false")
     private boolean telefoneVerificado = false;
 
+    /** Painel de moderação e prospecção (/api/admin). Cadastro normal fica false. */
+    @Column(nullable = false)
+    @ColumnDefault("false")
+    private boolean admin = false;
+
     /** Ex.: CG-482913. Some depois da verificação. */
     @JsonIgnore
     @Column(length = 16)
@@ -117,6 +122,14 @@ public class Usuario {
 
     public void setTelefoneVerificado(boolean telefoneVerificado) {
         this.telefoneVerificado = telefoneVerificado;
+    }
+
+    public boolean isAdmin() {
+        return admin;
+    }
+
+    public void setAdmin(boolean admin) {
+        this.admin = admin;
     }
 
     public String getCodigoVerificacao() {

@@ -94,6 +94,7 @@ public class AuthService {
                 usuario.getNome(),
                 usuario.getWhatsapp(),
                 usuario.isTelefoneVerificado(),
-                usuario.getCodigoVerificacao());
+                usuario.getCodigoVerificacao(),
+                usuario.isAdmin());
     }
 }

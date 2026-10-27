@@ -25,6 +25,20 @@ public final class TextoAbordagem {
                 + "pra quem procura na região achar mais fácil. Quer que eu te mande o link pra você ver se ficou certo?";
     }
 
+    /**
+     * Texto do botão "Chamar no WhatsApp" no painel admin (prospecção).
+     * Identifica o CompreGado na primeira frase — sem persona falsa.
+     */
+    public static String mensagemAdminProspeccao(Anuncio anuncio) {
+        String rotulo = rotulo(anuncio);
+        String cidade = anuncio.getCidade();
+        return "Olá! Aqui é da equipe do CompreGado. Organizei seu lote de "
+                + lote(anuncio.getQuantidade(), rotulo)
+                + emCidade(cidade).replaceFirst(",$", "")
+                + " e coloquei no app pra quem procura na região achar mais fácil. "
+                + "Quer que eu te mande o link pra você conferir?";
+    }
+
     public static String link(String url) {
         return "Tá aqui: " + url + ". Se o preço ou o telefone tiver errado, me fala que eu ajusto. Abraço e boa venda.";
     }

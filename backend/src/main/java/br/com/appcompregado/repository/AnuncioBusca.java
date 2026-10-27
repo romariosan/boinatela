@@ -6,6 +6,7 @@ import br.com.appcompregado.domain.enums.Aptidao;
 import br.com.appcompregado.domain.enums.CategoriaAnimal;
 import br.com.appcompregado.domain.enums.Raca;
 import br.com.appcompregado.domain.enums.StatusProcessamento;
+import br.com.appcompregado.domain.enums.StatusPublicacao;
 import jakarta.persistence.criteria.CriteriaBuilder;
 import jakarta.persistence.criteria.JoinType;
 import jakarta.persistence.criteria.Predicate;
@@ -40,6 +41,9 @@ public final class AnuncioBusca {
             filtros.add(cb.equal(root.get("status"), AnuncioStatus.ATIVO));
             filtros.add(cb.isTrue(root.get("ativo")));
             filtros.add(cb.notEqual(root.get("statusProcessamento"), StatusProcessamento.RASCUNHO_SEM_FOTO));
+            // Só lote aprovado na moderação; PENDENTE/REJEITADO/null ficam fora da vitrine.
+            filtros.add(cb.isNotNull(root.get("statusPublicacao")));
+            filtros.add(cb.equal(root.get("statusPublicacao"), StatusPublicacao.APROVADO));
             exigirProva(filtros, root, cb);
             for (String termo : termos(q)) {
                 filtros.add(casaComTermo(root, cb, termo));
@@ -65,7 +69,9 @@ public final class AnuncioBusca {
     }
 
     /**
-     * Vitrine e busca só mostram lote com foto real e cidade preenchida. "A confirmar" não entra.
+     * Vitrine e busca: foto + cidade preenchida.
+     * "Local a combinar" vale (fallback explícito). Legado SEM_CIDADE / "A confirmar" ficam fora
+     * até migrar para "Local a combinar".
      */
     private static void exigirProva(
             List<Predicate> filtros, Root<Anuncio> root, CriteriaBuilder cb) {
@@ -74,6 +80,9 @@ public final class AnuncioBusca {
         filtros.add(cb.isNotNull(root.get("cidade")));
         filtros.add(cb.notEqual(cb.trim(root.get("cidade")), ""));
         filtros.add(cb.not(cb.like(cb.lower(cb.trim(root.get("cidade"))), "a confirmar%")));
+        // legado literal SEM_CIDADE (antes do fallback "Local a combinar")
+        filtros.add(cb.not(cb.equal(cb.lower(cb.trim(root.get("cidade"))), "sem_cidade")));
+        filtros.add(cb.not(cb.like(cb.lower(cb.trim(root.get("cidade"))), "sem_cidade -%")));
     }
 
     /** Mesma regra da vitrine, para teste e para não divergir do filtro. */
@@ -84,7 +93,12 @@ public final class AnuncioBusca {
         if (cidade == null || cidade.isBlank()) {
             return false;
         }
-        return !cidade.trim().toLowerCase(Locale.ROOT).startsWith("a confirmar");
+        String normal = cidade.trim().toLowerCase(Locale.ROOT);
+        if (normal.startsWith("a confirmar")) {
+            return false;
+        }
+        // Legado "SEM_CIDADE"; "Local a combinar" é o fallback válido.
+        return !normal.equals("sem_cidade") && !normal.startsWith("sem_cidade -");
     }
 
     static List<String> termos(String q) {

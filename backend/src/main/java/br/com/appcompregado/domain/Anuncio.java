@@ -4,7 +4,9 @@ import br.com.appcompregado.domain.enums.AnuncioStatus;
 import br.com.appcompregado.domain.enums.Aptidao;
 import br.com.appcompregado.domain.enums.CategoriaAnimal;
 import br.com.appcompregado.domain.enums.Raca;
+import br.com.appcompregado.domain.enums.StatusContato;
 import br.com.appcompregado.domain.enums.StatusProcessamento;
+import br.com.appcompregado.domain.enums.StatusPublicacao;
 import br.com.appcompregado.domain.enums.TipoVenda;
 import jakarta.persistence.CollectionTable;
 import jakarta.persistence.Column;
@@ -142,6 +144,37 @@ public class Anuncio {
     @ColumnDefault("true")
     private boolean ativo = true;
 
+    /**
+     * Captura já gravada; a Gemini ainda vai tentar melhorar título/preço/cidade em segundo plano.
+     * O anúncio não some da fila nem é apagado se a IA falhar.
+     */
+    @Column(nullable = false)
+    @ColumnDefault("false")
+    private boolean geminiPendente = false;
+
+    @Column(nullable = false)
+    @ColumnDefault("0")
+    private int tentativasGemini = 0;
+
+    private LocalDateTime proximaTentativaGemini;
+
+    /**
+     * Moderação da vitrine. Captura do Radar começa em {@link StatusPublicacao#PENDENTE};
+     * publicação pelo app (usuário autenticado) já nasce {@link StatusPublicacao#APROVADO}.
+     */
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false, length = 20)
+    @ColumnDefault("'PENDENTE'")
+    private StatusPublicacao statusPublicacao = StatusPublicacao.PENDENTE;
+
+    /**
+     * Abordagem / reivindicação do produtor. Captura começa em {@link StatusContato#NAO_CONTATADO}.
+     */
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false, length = 20)
+    @ColumnDefault("'NAO_CONTATADO'")
+    private StatusContato statusContato = StatusContato.NAO_CONTATADO;
+
     @ManyToOne(fetch = FetchType.LAZY, optional = false)
     @JoinColumn(name = "fk_vendedor", nullable = false)
     private Usuario vendedor;
@@ -227,9 +260,13 @@ public class Anuncio {
     }
 
     public boolean publicadoNaVitrine() {
-        return ativo
-                && status == AnuncioStatus.ATIVO
-                && statusProcessamento != StatusProcessamento.RASCUNHO_SEM_FOTO;
+        if (!ativo
+                || status != AnuncioStatus.ATIVO
+                || statusProcessamento == StatusProcessamento.RASCUNHO_SEM_FOTO
+                || statusPublicacao != StatusPublicacao.APROVADO) {
+            return false;
+        }
+        return br.com.appcompregado.repository.AnuncioBusca.temProva(urlFotoPrincipal, cidade);
     }
 
     public List<String> getFotos() {
@@ -382,6 +419,46 @@ public class Anuncio {
 
     public void setAtivo(boolean ativo) {
         this.ativo = ativo;
+    }
+
+    public boolean isGeminiPendente() {
+        return geminiPendente;
+    }
+
+    public void setGeminiPendente(boolean geminiPendente) {
+        this.geminiPendente = geminiPendente;
+    }
+
+    public int getTentativasGemini() {
+        return tentativasGemini;
+    }
+
+    public void setTentativasGemini(int tentativasGemini) {
+        this.tentativasGemini = tentativasGemini;
+    }
+
+    public LocalDateTime getProximaTentativaGemini() {
+        return proximaTentativaGemini;
+    }
+
+    public void setProximaTentativaGemini(LocalDateTime proximaTentativaGemini) {
+        this.proximaTentativaGemini = proximaTentativaGemini;
+    }
+
+    public StatusPublicacao getStatusPublicacao() {
+        return statusPublicacao;
+    }
+
+    public void setStatusPublicacao(StatusPublicacao statusPublicacao) {
+        this.statusPublicacao = statusPublicacao;
+    }
+
+    public StatusContato getStatusContato() {
+        return statusContato;
+    }
+
+    public void setStatusContato(StatusContato statusContato) {
+        this.statusContato = statusContato;
     }
 
     /** Página pública do lote, sem login. */

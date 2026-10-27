@@ -5,6 +5,7 @@ import br.com.appcompregado.domain.Usuario;
 import br.com.appcompregado.domain.enums.Aptidao;
 import br.com.appcompregado.domain.enums.CategoriaAnimal;
 import br.com.appcompregado.domain.enums.Raca;
+import br.com.appcompregado.domain.enums.StatusPublicacao;
 import br.com.appcompregado.domain.enums.TipoVenda;
 import br.com.appcompregado.repository.AnuncioRepository;
 import br.com.appcompregado.repository.UsuarioRepository;
@@ -101,6 +102,7 @@ public class DataSeeder {
         item.setQuantidade(quantidade);
         item.setPesoMedioKg(pesoMedioKg);
         item.setVendedor(vendedor);
+        item.setStatusPublicacao(StatusPublicacao.APROVADO);
         return item;
     }
 }

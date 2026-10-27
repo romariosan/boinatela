@@ -3,6 +3,7 @@ package br.com.appcompregado.service;
 import br.com.appcompregado.domain.Anuncio;
 import br.com.appcompregado.domain.CodigoOtp;
 import br.com.appcompregado.domain.Usuario;
+import br.com.appcompregado.domain.enums.StatusContato;
 import br.com.appcompregado.repository.AnuncioRepository;
 import br.com.appcompregado.repository.CodigoOtpRepository;
 import br.com.appcompregado.repository.UsuarioRepository;
@@ -75,6 +76,7 @@ public class ReivindicacaoService {
 
         registro.setUtilizado(true);
         anuncio.setReivindicado(true);
+        anuncio.setStatusContato(StatusContato.REIVINDICADO);
         localizar(telefone).ifPresent(usuario -> assumir(anuncio, usuario));
         return AnuncioResponse.from(anuncio);
     }

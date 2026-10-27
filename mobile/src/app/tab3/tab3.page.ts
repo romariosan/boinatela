@@ -1,7 +1,7 @@
 import { HttpErrorResponse } from '@angular/common/http';
 import { ChangeDetectorRef, Component, DestroyRef, NgZone, OnInit } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
-import { Router } from '@angular/router';
+import { ActivatedRoute, Router } from '@angular/router';
 import { AlertController, RefresherCustomEvent, ToastController } from '@ionic/angular/lazy';
 import { Observable } from 'rxjs';
 import {
@@ -47,6 +47,7 @@ export class Tab3Page implements OnInit {
   ocupado: number | null = null;
 
   private primeiraEntrada = true;
+  private levandoParaAdmin = false;
 
   constructor(
     private readonly auth: AuthService,
@@ -57,6 +58,7 @@ export class Tab3Page implements OnInit {
     private readonly verificacao: VerificacaoService,
     private readonly planoPro: PlanoProService,
     private readonly router: Router,
+    private readonly rota: ActivatedRoute,
     private readonly alertCtrl: AlertController,
     private readonly toastCtrl: ToastController,
     private readonly zone: NgZone,
@@ -85,16 +87,45 @@ export class Tab3Page implements OnInit {
         void this.carregarMeusAnuncios();
       }
     });
+    this.rota.queryParamMap.pipe(takeUntilDestroyed(this.destroyRef)).subscribe(params => {
+      if (params.get('returnUrl') === '/admin') {
+        void this.seguirParaAdminAposLogin();
+      }
+    });
   }
 
   ionViewWillEnter(): void {
     // Na primeira entrada a inscrição do ngOnInit já carregou; depois, recarrega para pegar anúncios novos.
+    // O deep link /admin é só via queryParamMap — evita dois modais de login empilhados.
     if (this.primeiraEntrada) {
       this.primeiraEntrada = false;
       return;
     }
     if (this.auth.logado) {
       void this.carregarMeusAnuncios();
+    }
+  }
+
+  /** Deep link /admin sem sessão: Conta pede login e, se for admin, abre o painel. */
+  private async seguirParaAdminAposLogin(): Promise<void> {
+    if (this.levandoParaAdmin) {
+      return;
+    }
+    this.levandoParaAdmin = true;
+    try {
+      const logado = await this.sessao.exigirLogin();
+      await this.router.navigate(['/tabs/tab3'], { queryParams: {}, replaceUrl: true });
+      if (!logado) {
+        await this.avisar('Entre com a conta admin para abrir a moderação.', 'warning');
+        return;
+      }
+      if (!this.auth.snapshot?.admin) {
+        await this.avisar('Esta conta não tem acesso de administrador.', 'warning');
+        return;
+      }
+      void this.router.navigateByUrl('/admin');
+    } finally {
+      this.levandoParaAdmin = false;
     }
   }
 
@@ -116,6 +147,10 @@ export class Tab3Page implements OnInit {
 
   alterarSenha(): void {
     void this.router.navigate(['/tabs/alterar-senha']);
+  }
+
+  abrirAdmin(): void {
+    void this.router.navigateByUrl('/admin');
   }
 
   editar(id: number): void {

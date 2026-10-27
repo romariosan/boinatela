@@ -30,6 +30,25 @@ const PAPEIS = {
   },
 };
 
+/** Mesma regra de PhoneUtils.celularBrasileiro. LID e fixo voltam vazio. */
+function celularBrasileiro(valor) {
+  let digitos = String(valor || '').split('@')[0].split(':')[0].replace(/\D/g, '');
+  if (digitos.startsWith('55') && (digitos.length === 12 || digitos.length === 13)) {
+    digitos = digitos.substring(2);
+  }
+  if (digitos.length === 10 && digitos.charAt(2) >= '6' && digitos.charAt(2) <= '9') {
+    digitos = digitos.substring(0, 2) + '9' + digitos.substring(2);
+  }
+  if (digitos.length !== 11 || digitos.charAt(2) !== '9') {
+    return '';
+  }
+  const ddd = Number(digitos.slice(0, 2));
+  if (!Number.isInteger(ddd) || ddd < 11 || ddd > 99) {
+    return '';
+  }
+  return digitos;
+}
+
 function iniciar(nome) {
   carregarEnv();
   const papel = PAPEIS[nome];
@@ -113,7 +132,7 @@ function iniciar(nome) {
 
   client.on('message', (msg) => {
     const deGrupo = String(msg.from || '').endsWith('@g.us');
-    const numero = String(msg.from || '').split('@')[0];
+    const numero = String((deGrupo ? msg.author : msg.from) || msg.from || '').split('@')[0];
     log(RESET, `[MENSAGEM] De: ${numero}, Texto: ${msg.body || ''}`);
     if (!deGrupo && nome === 'consultor') {
       if (!msg.fromMe) {
@@ -137,11 +156,47 @@ function iniciar(nome) {
   async function publicarQr(qr) {
     await QRCode.toFile(png, qr, { width: 560, margin: 2 });
     escreverPagina('No celular: Aparelhos conectados, depois Conectar um aparelho.', `qr-${nome}.png?v=${Date.now()}`);
-    log(AMARELO, `[QR] Aberto em qr-${nome}.html. Aponte a camera para essa janela.`);
+    log(AMARELO, `[QR] Pagina pronta: ${html}`);
     if (!paginaAberta) {
-      paginaAberta = true;
-      execFile('cmd.exe', ['/c', `start "${papel.titulo}" "${html}"`]);
+      abrirPaginaQr();
     }
+  }
+
+  /**
+   * Abre o HTML no app padrão.
+   * Nunca passe o título do chip ("CHIP RADAR") como executável: o Windows
+   * mostra "nao pode encontrar" e o QR nao abre. Start-Process -FilePath no
+   * arquivo .html usa a associacao do sistema (browser). Em PS antigo nao
+   * existe -LiteralPath no Start-Process.
+   */
+  function abrirPaginaQr() {
+    const caminhoPs = String(html).replace(/'/g, "''");
+    execFile(
+      'powershell.exe',
+      [
+        '-NoProfile',
+        '-ExecutionPolicy',
+        'Bypass',
+        '-Command',
+        `Start-Process -FilePath '${caminhoPs}'`,
+      ],
+      (erro) => {
+        if (erro) {
+          // Fallback: titulo vazio no `start` do cmd (1o "..." seria o titulo).
+          execFile('cmd.exe', ['/c', 'start', '', html], (erro2) => {
+            if (erro2) {
+              log(VERMELHO, `[QR] Nao abriu a janela. Abra manualmente: ${html}`);
+              return;
+            }
+            paginaAberta = true;
+            log(AMARELO, `[QR] Janela aberta. Aponte a camera para qr-${nome}.html.`);
+          });
+          return;
+        }
+        paginaAberta = true;
+        log(AMARELO, `[QR] Janela aberta. Aponte a camera para qr-${nome}.html.`);
+      }
+    );
   }
 
   function escreverPagina(instrucao, imagem) {
@@ -167,19 +222,174 @@ function iniciar(nome) {
     );
   }
 
+  // Mesmo autor+grupo: junta texto e até 5 fotos. Após a ÚLTIMA mensagem espera ~35s
+  // para o produtor mandar mais fotos; o lote inteiro vive no máximo 3 min.
+  const JANELA_LOTE_MS = 3 * 60 * 1000;
+  const ESPERA_APOS_ULTIMA_MS = 35000;
+  const FOTO_TENTATIVAS_IMEDIATAS = 5;
+  const FOTO_REENVIO_MAX = 8;
+  const FOTO_REENVIO_BASE_MS = 8000;
+  const lotesGrupo = new Map();
+
   async function publicarGrupo(msg) {
     if (!WEBHOOK) {
       return;
     }
-    const midias = [];
-    if (msg.hasMedia) {
-      const media = await msg.downloadMedia();
-      if (media && media.data && String(media.mimetype || '').startsWith('image/')) {
-        midias.push({ tipo: media.mimetype, base64: media.data });
-      }
+    const chave = `${msg.from}|${msg.author || msg.from}`;
+    const aberto = lotesGrupo.get(chave);
+    if (aberto && aberto.timer) {
+      clearTimeout(aberto.timer);
+      aberto.timer = null;
     }
     const texto = msg.body || '';
+    const captura = await capturarMidiaDaMensagem(msg);
+    if (!texto && captura.midias.length === 0 && !captura.pendente) {
+      const parado = lotesGrupo.get(chave);
+      if (parado) {
+        armarEnvio(parado, chave);
+      }
+      return;
+    }
+    const agora = Date.now();
+    let lote = lotesGrupo.get(chave);
+    if (lote && agora - lote.inicio > JANELA_LOTE_MS) {
+      clearTimeout(lote.timer);
+      lotesGrupo.delete(chave);
+      enviarLote(lote).catch((erro) => log(VERMELHO, `[RADAR] ${textoErro(erro)}`));
+      lote = null;
+    }
+    if (!lote) {
+      lote = { inicio: agora, textos: [], midias: [], pendentes: [], msg, timer: null };
+      lotesGrupo.set(chave, lote);
+    }
+    if (texto) {
+      lote.textos.push(texto);
+    }
+    for (const midia of captura.midias) {
+      if (lote.midias.length >= 5) {
+        break;
+      }
+      lote.midias.push(midia);
+    }
+    if (captura.pendente) {
+      lote.pendentes.push(captura.pendente);
+      log(AMARELO, `[RADAR] Foto pendente (vai retentar). Restam ${lote.pendentes.length}.`);
+    }
+    if (captura.midias.length > 0) {
+      log(VERDE, `[RADAR] Foto ok no lote (${lote.midias.length}/5).`);
+    }
+    lote.msg = msg;
+    armarEnvio(lote, chave);
+  }
+
+  function armarEnvio(lote, chave) {
+    if (lote.timer) {
+      clearTimeout(lote.timer);
+    }
+    const restante = JANELA_LOTE_MS - (Date.now() - lote.inicio);
+    lote.timer = setTimeout(() => {
+      if (lotesGrupo.get(chave) !== lote) {
+        return;
+      }
+      lotesGrupo.delete(chave);
+      enviarLote(lote).catch((erro) => log(VERMELHO, `[RADAR] ${textoErro(erro)}`));
+    }, Math.min(ESPERA_APOS_ULTIMA_MS, Math.max(0, restante)));
+  }
+
+  /** Baixa uma mensagem de imagem; se falhar, devolve pendente para retentativa. */
+  async function capturarMidiaDaMensagem(msg) {
+    const pareceFoto = msg.hasMedia || msg.type === 'image' || msg.type === 'sticker';
+    if (!pareceFoto) {
+      return { midias: [], pendente: null };
+    }
+    const sid = repararIdMensagem(msg);
+    const resultado = await baixarImagensComRetentativas(msg, sid, FOTO_TENTATIVAS_IMEDIATAS);
+    if (resultado.midias.length > 0) {
+      return { midias: resultado.midias, pendente: null };
+    }
+    const detalhe = resultado.erro ? descreverErro(resultado.erro) : 'resposta sem imagem';
+    log(VERMELHO, `[RADAR] Foto nao baixou agora: ${detalhe}`);
+    return { midias: [], pendente: { msg, sid } };
+  }
+
+  async function baixarImagensComRetentativas(msg, sid, maxTentativas) {
+    let ultimo = null;
+    for (let tentativa = 1; tentativa <= maxTentativas; tentativa++) {
+      const resultado = await baixarComEstrategias([
+        () => baixarPelaPagina(sid || repararIdMensagem(msg)),
+        () => baixarPelaBiblioteca(msg),
+      ]);
+      if (resultado.midias.length > 0) {
+        return resultado;
+      }
+      ultimo = resultado.erro;
+      if (tentativa < maxTentativas) {
+        await new Promise((resolve) => setTimeout(resolve, 1000 * tentativa));
+      }
+    }
+    return { midias: [], erro: ultimo };
+  }
+
+  async function baixarPelaPagina(sid) {
+    if (!sid || !client.pupPage) {
+      throw new Error('mensagem sem id para baixar a foto');
+    }
+    const result = await client.pupPage.evaluate(baixarMidiaNoWhatsApp, sid);
+    if (!result || !result.data) {
+      return undefined;
+    }
+    return { data: result.data, mimetype: result.mimetype || 'image/jpeg' };
+  }
+
+  async function baixarPelaBiblioteca(msg) {
+    if (!msg || typeof msg.downloadMedia !== 'function') {
+      throw new Error('biblioteca sem download');
+    }
+    repararIdMensagem(msg);
+    const media = await msg.downloadMedia();
+    if (!media || !media.data) {
+      return undefined;
+    }
+    return { data: media.data, mimetype: media.mimetype || 'image/jpeg' };
+  }
+
+  async function esgotarPendentes(lote, rodadas) {
+    for (let r = 0; r < rodadas && lote.pendentes.length > 0 && lote.midias.length < 5; r++) {
+      const fila = lote.pendentes.splice(0, lote.pendentes.length);
+      for (const item of fila) {
+        if (lote.midias.length >= 5) {
+          lote.pendentes.push(item);
+          break;
+        }
+        const sid = item.sid || repararIdMensagem(item.msg);
+        const resultado = await baixarImagensComRetentativas(item.msg, sid, 3);
+        if (resultado.midias.length > 0) {
+          lote.midias.push(...resultado.midias);
+          log(VERDE, `[RADAR] Foto recuperada na retentativa (${lote.midias.length}/5).`);
+        } else {
+          lote.pendentes.push({ msg: item.msg, sid });
+        }
+      }
+      if (lote.pendentes.length > 0 && r + 1 < rodadas) {
+        await new Promise((resolve) => setTimeout(resolve, 2000 * (r + 1)));
+      }
+    }
+  }
+
+  async function enviarLote(lote) {
+    await esgotarPendentes(lote, 2);
+    const msg = lote.msg;
+    const texto = lote.textos.join('\n').trim();
+    const midias = lote.midias.slice(0, 5);
     if (!texto && midias.length === 0) {
+      if (lote.pendentes.length > 0) {
+        agendarRetentativaFoto({
+          tentativa: 0,
+          pendentes: lote.pendentes.slice(),
+          msg,
+          textos: lote.textos.slice(),
+        });
+      }
       return;
     }
     let grupoNome = '';
@@ -189,6 +399,34 @@ function iniciar(nome) {
     } catch {
       grupoNome = '';
     }
+    const produtor = await telefoneDoAutor(msg);
+    if (!produtor) {
+      log(AMARELO, `[RADAR] Autor sem celular brasileiro. Grupo ${grupoNome || msg.from} nao foi enviado.`);
+      return;
+    }
+    await postarOferta({
+      msg,
+      grupoNome,
+      produtor,
+      texto,
+      midias,
+      sufixoId: '',
+    });
+    if (lote.pendentes.length > 0) {
+      agendarRetentativaFoto({
+        tentativa: 0,
+        pendentes: lote.pendentes.slice(),
+        msg,
+        textos: lote.textos.slice(),
+        grupoNome,
+        produtor,
+      });
+    }
+  }
+
+  async function postarOferta({ msg, grupoNome, produtor, texto, midias, sufixoId }) {
+    const baseId = msg.id && msg.id.id != null ? String(msg.id.id) : '';
+    const mensagemId = `${baseId || 'radar'}${sufixoId || ''}`;
     const resposta = await fetch(`${API}/api/webhook/radar-ofertas`, {
       method: 'POST',
       headers: {
@@ -197,14 +435,120 @@ function iniciar(nome) {
       },
       body: JSON.stringify({
         grupoId: msg.from,
-        grupoNome,
-        mensagemId: msg.id && msg.id.id ? msg.id.id : '',
-        produtor: String(msg.author || msg.from || '').split('@')[0],
-        texto,
+        grupoNome: grupoNome || '',
+        mensagemId,
+        produtor,
+        texto: texto || '',
         midias,
       }),
     });
-    log(resposta.ok ? VERDE : VERMELHO, `[RADAR] HTTP ${resposta.status} grupo ${grupoNome || msg.from}`);
+    const corpoResposta = await resposta.text();
+    const resumo = corpoResposta.replace(/\s+/g, ' ').slice(0, 160);
+    log(
+      resposta.ok ? VERDE : VERMELHO,
+      `[RADAR] HTTP ${resposta.status} ${resumo} fotos=${midias.length} grupo ${grupoNome || msg.from}`
+    );
+    return resposta.ok;
+  }
+
+  function agendarRetentativaFoto(ctx) {
+    if (ctx.tentativa >= FOTO_REENVIO_MAX || !ctx.pendentes || ctx.pendentes.length === 0) {
+      if (ctx.tentativa >= FOTO_REENVIO_MAX) {
+        log(VERMELHO, `[RADAR] Foto esgotou ${FOTO_REENVIO_MAX} reenvios. Texto ja pode estar no rascunho.`);
+      }
+      return;
+    }
+    const espera = FOTO_REENVIO_BASE_MS * Math.min(ctx.tentativa + 1, 5);
+    log(AMARELO, `[RADAR] Retentativa de foto #${ctx.tentativa + 1} em ${Math.round(espera / 1000)}s (${ctx.pendentes.length} pendente(s)).`);
+    setTimeout(() => {
+      retentarFotosDepois(ctx).catch((erro) => log(VERMELHO, `[RADAR] Retentativa: ${textoErro(erro)}`));
+    }, espera);
+  }
+
+  async function retentarFotosDepois(ctx) {
+    const lote = {
+      midias: [],
+      pendentes: ctx.pendentes.slice(),
+      textos: ctx.textos || [],
+      msg: ctx.msg,
+    };
+    await esgotarPendentes(lote, 3);
+    let grupoNome = ctx.grupoNome || '';
+    let produtor = ctx.produtor || '';
+    if (lote.midias.length > 0) {
+      if (!produtor) {
+        produtor = await telefoneDoAutor(ctx.msg);
+      }
+      if (!grupoNome) {
+        try {
+          const chat = await ctx.msg.getChat();
+          grupoNome = chat.name || '';
+        } catch {
+          grupoNome = '';
+        }
+      }
+      if (produtor) {
+        // Texto vazio: a API atualiza o mesmo anúncio (14 dias) e anexa as fotos.
+        await postarOferta({
+          msg: ctx.msg,
+          grupoNome,
+          produtor,
+          texto: '',
+          midias: lote.midias.slice(0, 5),
+          sufixoId: `-foto${Date.now()}`,
+        });
+      }
+    }
+    if (lote.pendentes.length > 0) {
+      agendarRetentativaFoto({
+        tentativa: ctx.tentativa + 1,
+        pendentes: lote.pendentes,
+        msg: ctx.msg,
+        textos: ctx.textos,
+        grupoNome,
+        produtor,
+      });
+    }
+  }
+
+  function textoErro(erro) {
+    if (!erro) {
+      return 'erro desconhecido';
+    }
+    return erro.message || String(erro);
+  }
+
+  async function telefoneDoAutor(msg) {
+    const autor = String(msg.author || '');
+    const direto = celularBrasileiro(autor);
+    if (direto) {
+      return direto;
+    }
+    const jid = autor.includes('@') ? autor : '';
+    if (jid) {
+      try {
+        const pares = await client.getContactLidAndPhone([jid]);
+        const pn = pares && pares[0] && pares[0].pn;
+        const resolvido = celularBrasileiro(pn);
+        if (resolvido) {
+          return resolvido;
+        }
+      } catch (erro) {
+        log(AMARELO, `[RADAR] Nao achei o celular do autor: ${erro.message}`);
+      }
+    }
+    try {
+      const contato = await msg.getContact();
+      const id = contato && contato.id;
+      const candidato = id && id.server === 'c.us' ? id._serialized || id.user : '';
+      const resolvido = celularBrasileiro(candidato);
+      if (resolvido) {
+        return resolvido;
+      }
+    } catch (erro) {
+      log(AMARELO, `[RADAR] Contato sem celular: ${erro.message}`);
+    }
+    return '';
   }
 
   async function publicarEntrada(msg) {
@@ -363,4 +707,164 @@ function carregarEnv() {
   }
 }
 
-module.exports = { iniciar };
+async function baixarComEstrategias(estrategias, opcoes = {}) {
+  const lista = Array.isArray(estrategias) ? estrategias : [];
+  const dormir = opcoes.dormir || ((ms) => new Promise((resolve) => setTimeout(resolve, ms)));
+  const esperaMs = opcoes.esperaMs ?? 0;
+  let ultimo = null;
+  for (let i = 0; i < lista.length; i++) {
+    try {
+      const media = await lista[i]();
+      if (media && media.data && String(media.mimetype || '').startsWith('image/')) {
+        return {
+          midias: [{ tipo: media.mimetype, base64: media.data }],
+          erro: null,
+          tentativas: i + 1,
+        };
+      }
+    } catch (erro) {
+      ultimo = erro;
+    }
+    if (i < lista.length - 1 && esperaMs > 0) {
+      await dormir(esperaMs);
+    }
+  }
+  return { midias: [], erro: ultimo, tentativas: lista.length };
+}
+
+function repararIdMensagem(msg) {
+  const id = msg && msg.id;
+  if (!id || typeof id !== 'object') {
+    return '';
+  }
+  if (typeof id._serialized === 'string' && id._serialized) {
+    return id._serialized;
+  }
+  const renomeado = id['$1'];
+  if (typeof renomeado === 'string' && renomeado) {
+    id._serialized = renomeado;
+    return renomeado;
+  }
+  if (id.remote && id.id != null && id.fromMe != null) {
+    const base = `${id.fromMe}_${id.remote}_${id.id}`;
+    const participante = id.participant || msg.author || '';
+    id._serialized = participante ? `${base}_${participante}` : base;
+    return id._serialized;
+  }
+  return '';
+}
+
+function descreverErro(erro) {
+  if (!erro) {
+    return 'erro desconhecido';
+  }
+  const nome = erro.name || 'Error';
+  const mensagem = erro.message || String(erro);
+  const pilha = erro.stack ? String(erro.stack).split('\n').slice(0, 4).join(' | ') : '';
+  return pilha ? `${nome}: ${mensagem} | ${pilha}` : `${nome}: ${mensagem}`;
+}
+
+/**
+ * Roda dentro da página do WhatsApp.
+ * O download exige downloadQpl.addAnnotations. Sem o mimetype declarado, o WhatsApp
+ * assume application/octet-stream e lança o erro minificado "t" (InvalidMediaFileType).
+ */
+async function baixarMidiaNoWhatsApp(msgId) {
+  const colecao = window.require('WAWebCollections').Msg;
+  let encontrado = colecao.get(msgId);
+  if (!encontrado) {
+    const busca = await colecao.getMessagesById([msgId]);
+    encontrado = busca && busca.messages && busca.messages[0];
+  }
+  if (!encontrado || !encontrado.mediaData) {
+    return null;
+  }
+  for (let espera = 0; espera < 6; espera++) {
+    if (encontrado.mediaData.mediaStage === 'REUPLOADING') {
+      return null;
+    }
+    if (
+      encontrado.mediaData.mediaStage === 'RESOLVED'
+      || (encontrado.mediaData.mediaBlob && typeof encontrado.mediaData.mediaBlob.arrayBuffer === 'function')
+      || encontrado.directPath
+    ) {
+      break;
+    }
+    await new Promise((resolve) => setTimeout(resolve, 1000));
+    const deNovo = colecao.get(msgId);
+    if (deNovo && deNovo.mediaData) {
+      encontrado = deNovo;
+    }
+  }
+  if (encontrado.mediaData.mediaStage === 'REUPLOADING') {
+    return null;
+  }
+  const qpl = {
+    addAnnotations() {
+      return this;
+    },
+    addPoint() {
+      return this;
+    },
+  };
+  const declarado = encontrado.mimetype;
+  const mime = typeof declarado === 'string' && declarado.startsWith('image/')
+    ? declarado
+    : 'image/jpeg';
+  if (encontrado.mediaData.mediaStage !== 'RESOLVED' && typeof encontrado.downloadMedia === 'function') {
+    try {
+      await encontrado.downloadMedia({
+        downloadEvenIfExpensive: true,
+        rmrReason: 1,
+        downloadQpl: qpl,
+      });
+    } catch {
+      /* a descriptografia abaixo ainda pode ler a mídia já recebida */
+    }
+  }
+  const blobPronto = encontrado.mediaData.mediaBlob;
+  if (blobPronto && typeof blobPronto.arrayBuffer === 'function') {
+    const bruto = await blobPronto.arrayBuffer();
+    const pronto = await window.WWebJS.arrayBufferToBase64Async(bruto);
+    if (pronto) {
+      return { data: pronto, mimetype: mime };
+    }
+  }
+  const decrypted = await window.require('WAWebDownloadManager').downloadManager.downloadAndMaybeDecrypt({
+    directPath: encontrado.directPath,
+    encFilehash: encontrado.encFilehash,
+    filehash: encontrado.filehash,
+    mediaKey: encontrado.mediaKey,
+    mediaKeyTimestamp: encontrado.mediaKeyTimestamp,
+    type: encontrado.type,
+    mimetype: mime,
+    signal: new AbortController().signal,
+    downloadQpl: qpl,
+  });
+  const data = await window.WWebJS.arrayBufferToBase64Async(decrypted);
+  return { data, mimetype: mime };
+}
+
+/** Junta midias novas no lote sem passar de 5 (várias fotos do mesmo produtor). */
+function acumularMidias(existentes, novas, limite = 5) {
+  const lista = Array.isArray(existentes) ? existentes.slice() : [];
+  for (const midia of Array.isArray(novas) ? novas : []) {
+    if (lista.length >= limite) {
+      break;
+    }
+    if (midia && midia.base64) {
+      lista.push(midia);
+    }
+  }
+  return lista;
+}
+
+module.exports = {
+  iniciar,
+  celularBrasileiro,
+  baixarComEstrategias,
+  repararIdMensagem,
+  descreverErro,
+  baixarMidiaNoWhatsApp,
+  acumularMidias,
+};

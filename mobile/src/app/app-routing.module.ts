@@ -33,6 +33,11 @@ const routes: Routes = [
       import('./anuncio-detalhe/anuncio-detalhe.module').then(m => m.AnuncioDetalhePageModule),
   },
   {
+    path: 'admin',
+    loadChildren: () =>
+      import('./admin/admin-dashboard.module').then(m => m.AdminDashboardPageModule),
+  },
+  {
     path: '',
     loadChildren: () => import('./tabs/tabs.module').then(m => m.TabsPageModule)
   }

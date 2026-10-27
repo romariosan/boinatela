@@ -23,7 +23,7 @@ import org.springframework.web.client.RestClientResponseException;
 public class GeminiDialogService {
 
     private static final Logger log = LoggerFactory.getLogger(GeminiDialogService.class);
-    private static final int TENTATIVAS = 3;
+    private static final int TENTATIVAS = 2;
 
     private static final String SISTEMA = """
             Você é o %s, do CompreGado, classificado de gado no Brasil.
@@ -47,7 +47,7 @@ public class GeminiDialogService {
 
     public GeminiDialogService(GeminiProperties propriedades, RestClient.Builder builder, ObjectMapper json) {
         this.propriedades = propriedades;
-        this.http = builder.build();
+        this.http = GeminiCorpo.cliente(builder);
         this.json = json;
     }
 
@@ -110,13 +110,13 @@ public class GeminiDialogService {
         RestClientResponseException ultima = null;
         for (int tentativa = 1; tentativa <= TENTATIVAS; tentativa++) {
             try {
-                return http.post()
+                return GeminiCorpo.ler(http.post()
                         .uri(propriedades.getUrl())
                         .header("x-goog-api-key", propriedades.getKey())
+                        .header("Accept", "application/json")
+                        .header("Accept-Encoding", "identity")
                         .contentType(MediaType.APPLICATION_JSON)
-                        .body(corpo)
-                        .retrieve()
-                        .body(String.class);
+                        .body(corpo));
             } catch (RestClientResponseException e) {
                 int codigo = e.getStatusCode().value();
                 if ((codigo == 429 || codigo == 503) && tentativa < TENTATIVAS) {
@@ -127,7 +127,7 @@ public class GeminiDialogService {
                 log.warn("Gemini diálogo HTTP {}", codigo);
                 return null;
             } catch (RestClientException e) {
-                log.warn("Gemini diálogo indisponível: {}", e.getMessage());
+                log.warn("Gemini diálogo indisponível: {}", GeminiCorpo.detalhe(e));
                 return null;
             }
         }
